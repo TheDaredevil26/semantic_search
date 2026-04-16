@@ -13,6 +13,9 @@ let isGraphOpen = false;
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 let statsData = null;
 let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+let isBookmarksPanelOpen = false;
+let isListView = false;
+let currentTheme = localStorage.getItem('theme') || 'dark';
 
 // --- DOM Elements ---
 const searchInput = document.getElementById('search-input');
@@ -41,6 +44,13 @@ const searchHistoryEl = document.getElementById('search-history');
 const historyItems = document.getElementById('history-items');
 const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
 const exportBtn = document.getElementById('export-btn');
+const bookmarksToggle = document.getElementById('bookmarks-toggle');
+const bookmarkCountEl = document.getElementById('bookmark-count');
+const bookmarksPanel = document.getElementById('bookmarks-panel');
+const bookmarksList = document.getElementById('bookmarks-list');
+const closeBookmarksBtn = document.getElementById('close-bookmarks');
+const themeToggle = document.getElementById('theme-toggle');
+const toggleViewBtn = document.getElementById('toggle-view');
 
 let autocompleteTimer = null;
 let activeAcIndex = -1;
@@ -51,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     setupEventListeners();
     renderSearchHistory();
+    applyTheme(currentTheme);
+    updateBookmarkBadge();
+    createScrollTopButton();
 });
 
 function setupEventListeners() {
@@ -102,6 +115,7 @@ function setupEventListeners() {
     // Close graph
     closeGraphBtn.addEventListener('click', closeGraph);
     overlay.addEventListener('click', () => {
+        if (isBookmarksPanelOpen) closeBookmarksPanel();
         if (isGraphOpen) closeGraph();
         if (profileModal.style.display !== 'none') closeProfileModal();
     });
@@ -112,11 +126,29 @@ function setupEventListeners() {
     // Export CSV
     exportBtn.addEventListener('click', exportCSV);
 
+    // Bookmarks panel
+    bookmarksToggle.addEventListener('click', toggleBookmarksPanel);
+    closeBookmarksBtn.addEventListener('click', closeBookmarksPanel);
+
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(currentTheme);
+        localStorage.setItem('theme', currentTheme);
+    });
+
+    // View toggle (grid/list)
+    if (toggleViewBtn) {
+        toggleViewBtn.addEventListener('click', toggleResultsView);
+    }
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (!autocompleteDropdown.classList.contains('hidden')) {
                 hideAutocomplete();
+            } else if (isBookmarksPanelOpen) {
+                closeBookmarksPanel();
             } else if (profileModal.style.display !== 'none') {
                 closeProfileModal();
             } else if (isGraphOpen) {
@@ -126,6 +158,11 @@ function setupEventListeners() {
         if (e.key === '/' && document.activeElement !== searchInput) {
             e.preventDefault();
             searchInput.focus();
+        }
+        // Ctrl+B for bookmarks
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            toggleBookmarksPanel();
         }
     });
 }
@@ -250,6 +287,11 @@ async function performSearch() {
         currentResults = data.results;
         renderResults(data);
         addToHistory(query);
+
+        // Scroll to results
+        setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     } catch (error) {
         showError('Search failed: ' + error.message);
     } finally {
@@ -1016,6 +1058,7 @@ function toggleBookmark(alumniId, name) {
         showToast(`Bookmarked ${name}`, 'success');
     }
     localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+    updateBookmarkBadge();
     // Update all bookmark buttons
     document.querySelectorAll(`.bookmark-btn[data-id="${alumniId}"]`).forEach(btn => {
         btn.classList.toggle('bookmarked', isBookmarked(alumniId));
@@ -1024,4 +1067,131 @@ function toggleBookmark(alumniId, name) {
 
 function isBookmarked(alumniId) {
     return bookmarks.some(b => b.id === alumniId);
+}
+
+// --- Bookmarks Panel ---
+
+function toggleBookmarksPanel() {
+    if (isBookmarksPanelOpen) {
+        closeBookmarksPanel();
+    } else {
+        openBookmarksPanel();
+    }
+}
+
+function openBookmarksPanel() {
+    isBookmarksPanelOpen = true;
+    renderBookmarksList();
+    bookmarksPanel.style.display = 'flex';
+    overlay.style.display = 'block';
+    bookmarksPanel.offsetHeight; // force reflow
+    requestAnimationFrame(() => {
+        bookmarksPanel.classList.add('visible');
+        overlay.classList.add('visible');
+    });
+}
+
+function closeBookmarksPanel() {
+    isBookmarksPanelOpen = false;
+    bookmarksPanel.classList.remove('visible');
+    overlay.classList.remove('visible');
+    setTimeout(() => {
+        bookmarksPanel.style.display = 'none';
+        overlay.style.display = 'none';
+    }, 400);
+}
+
+function renderBookmarksList() {
+    if (bookmarks.length === 0) {
+        bookmarksList.innerHTML = `
+            <div class="bookmarks-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <p>No bookmarks yet.<br>Star alumni from search results to save them here.</p>
+            </div>
+        `;
+        return;
+    }
+
+    bookmarksList.innerHTML = bookmarks.map(b => `
+        <div class="bookmark-item" onclick="openProfile('${b.id}')">
+            <div class="bookmark-item-info">
+                <div class="bookmark-item-name">${escapeHtml(b.name)}</div>
+                <div class="bookmark-item-meta">ID: ${b.id}</div>
+            </div>
+            <button class="bookmark-remove-btn" onclick="event.stopPropagation(); removeBookmarkFromPanel('${b.id}')" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeBookmarkFromPanel(alumniId) {
+    bookmarks = bookmarks.filter(b => b.id !== alumniId);
+    localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+    updateBookmarkBadge();
+    renderBookmarksList();
+    // Update any visible bookmark buttons in results
+    document.querySelectorAll(`.bookmark-btn[data-id="${alumniId}"]`).forEach(btn => {
+        btn.classList.remove('bookmarked');
+    });
+    showToast('Bookmark removed', 'success');
+}
+
+function updateBookmarkBadge() {
+    if (bookmarks.length > 0) {
+        bookmarkCountEl.textContent = bookmarks.length;
+        bookmarkCountEl.classList.remove('hidden');
+    } else {
+        bookmarkCountEl.classList.add('hidden');
+    }
+}
+
+// --- Theme Toggle ---
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const darkIcon = document.getElementById('theme-icon-dark');
+    const lightIcon = document.getElementById('theme-icon-light');
+    if (theme === 'light') {
+        darkIcon.classList.add('hidden');
+        lightIcon.classList.remove('hidden');
+    } else {
+        darkIcon.classList.remove('hidden');
+        lightIcon.classList.add('hidden');
+    }
+}
+
+// --- Results View Toggle ---
+
+function toggleResultsView() {
+    isListView = !isListView;
+    resultsGrid.classList.toggle('list-view', isListView);
+    if (toggleViewBtn) {
+        toggleViewBtn.classList.toggle('active', isListView);
+        toggleViewBtn.title = isListView ? 'Switch to grid view' : 'Switch to list view';
+        toggleViewBtn.innerHTML = isListView
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+    }
+}
+
+// --- Scroll to Top ---
+
+function createScrollTopButton() {
+    const btn = document.createElement('button');
+    btn.className = 'scroll-top-btn';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>';
+    btn.title = 'Scroll to top';
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.body.appendChild(btn);
+
+    window.addEventListener('scroll', () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
 }
