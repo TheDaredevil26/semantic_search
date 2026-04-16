@@ -561,6 +561,7 @@ async def alumni_list(q: str = ""):
             "role": row["current_role"],
             "company": row["current_company"],
             "batch": int(row["batch_year"]),
+            "department": row["department"],
         })
         if len(results) >= 20:
             break

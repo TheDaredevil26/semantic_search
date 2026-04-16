@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered semantic search over alumni networks using Sentence-BERT, FAISS HNSW, cross-encoder reranking, weighted graph, and personalized PageRank.">
+    <title>Alumni Graph Search — Semantic AI-Powered Search (PRD v2)</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- vis.js for graph visualization -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Background Orbs -->
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+
+    <!-- Header -->
+    <header id="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>Alumni Graph Search</h1>
+                    <p class="tagline">Semantic AI × Graph Intelligence</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-stats" id="header-stats">
+                    <!-- Populated via JS -->
+                </div>
+                <div class="header-actions">
+                    <button id="bookmarks-toggle" class="header-icon-btn" title="Bookmarks">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <span id="bookmark-count" class="badge hidden">0</span>
+                    </button>
+                    <button id="theme-toggle" class="header-icon-btn" title="Toggle theme">
+                        <svg id="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                        <svg id="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Search Section -->
+        <section id="search-section" class="search-section">
+            <div class="search-hero">
+                <h2 class="hero-title">Search the Alumni Network</h2>
+                <p class="hero-subtitle">Ask anything in natural language — powered by Sentence-BERT embeddings and graph-based reranking</p>
+            </div>
+
+            <div class="search-container">
+                <div class="search-bar-wrapper">
+                    <div class="search-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </div>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="search-input" placeholder="e.g., Find ML engineers from 2020 batch who work at product companies..." autocomplete="off">
+                        <div id="autocomplete-dropdown" class="autocomplete-dropdown hidden"></div>
+                    </div>
+                    <button id="search-button" class="search-btn">
+                        <span class="btn-text">Search</span>
+                        <span class="btn-loader hidden">
+                            <svg class="spinner" width="20" height="20" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Quick Queries -->
+                <div class="quick-queries">
+                    <span class="quick-label">Try:</span>
+                    <button class="quick-query" data-query="Find ML engineers from the 2020 batch">ML engineers 2020</button>
+                    <button class="quick-query" data-query="Alumni similar to Priya Ramesh in career trajectory">Similar to Priya Ramesh</button>
+                    <button class="quick-query" data-query="Who transitioned from software engineering to product management?">SDE → PM transitions</button>
+                    <button class="quick-query" data-query="Find mentors with experience in AI research">AI research mentors</button>
+                    <button class="quick-query" data-query="Alumni from Computer Science who now work at startups in Bangalore">CS alumni in Bangalore startups</button>
+                </div>
+
+                <!-- Filters Row (legacy batch/dept) -->
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label for="batch-filter">Batch Year</label>
+                        <select id="batch-filter" multiple>
+                            <!-- Populated via JS -->
+                        </select>
+                        <div id="batch-chips" class="filter-chips"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dept-filter">Department</label>
+                        <select id="dept-filter" multiple>
+                            <!-- Populated via JS -->
+                        </select>
+                        <div id="dept-chips" class="filter-chips"></div>
+                    </div>
+                    <div class="filter-group slider-group">
+                        <label for="graph-weight">Graph Weight: <span id="graph-weight-value">0.40</span></label>
+                        <input type="range" id="graph-weight" min="0" max="100" value="40" step="5">
+                        <div class="slider-labels">
+                            <span>Vector Only</span>
+                            <span>Graph Only</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Structured Filter Panel (PRD §3.6) -->
+                <div class="structured-filters" id="structured-filters">
+                    <div class="sf-toggle" id="sf-toggle" onclick="toggleStructuredFilters()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                        <span>Advanced Filters</span>
+                        <svg id="sf-chevron" class="sf-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="sf-panel" id="sf-panel">
+                        <div class="sf-grid">
+                            <div class="sf-field">
+                                <label for="sf-company">Company</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-company" placeholder="e.g. Google" list="companies-list" autocomplete="off">
+                                    <datalist id="companies-list"><!-- JS --></datalist>
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-location">Location</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-location" placeholder="e.g. Bangalore" list="locations-list" autocomplete="off">
+                                    <datalist id="locations-list"><!-- JS --></datalist>
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-batch-year">Batch Year / Range</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-batch-year" placeholder="e.g. 2019 or 2015-2020">
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-skills">Skills (comma-separated)</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-skills" placeholder="e.g. Python, Machine Learning">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sf-actions">
+                            <button class="sf-apply-btn" id="sf-apply-btn" onclick="applyStructuredFilters()">Apply Filters</button>
+                            <button class="sf-clear-btn" id="sf-clear-btn" onclick="clearStructuredFilters()">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversational Search (PRD §3.14) -->
+                <div class="conv-section" id="conv-section">
+                    <div class="conv-toggle" id="conv-toggle" onclick="toggleConversational()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        <span>Multi-Turn Conversation</span>
+                        <svg id="conv-chevron" class="sf-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="conv-panel" id="conv-panel">
+                        <div class="conv-history" id="conv-history"></div>
+                        <div class="conv-input-row">
+                            <input type="text" id="conv-input" placeholder="Follow up: 'filter to Google', 'from 2020 batch', 'in Bangalore'..." autocomplete="off">
+                            <button class="conv-send-btn" onclick="sendConversationalQuery()" id="conv-send-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                            <button class="sf-clear-btn" onclick="resetConversation()" title="Reset conversation">Reset</button>
+                        </div>
+                        <p class="conv-hint">Try: "Find ML engineers" → "filter to Bangalore" → "from 2019 batch"</p>
+                    </div>
+                </div>
+
+                <!-- Search History -->
+                <div id="search-history" class="search-history hidden">
+                    <div class="history-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Recent
+                    </div>
+                    <div id="history-items" class="history-items">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Path Finder Section -->
+        <section id="path-finder-section" class="path-finder-section">
+            <div class="path-finder-card">
+                <div class="path-finder-header">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        Path Finder
+                    </h3>
+                    <p class="path-finder-desc">Discover how two alumni are connected through shared companies, skills, or batches</p>
+                </div>
+                <div class="path-finder-inputs">
+                    <div class="path-input-group">
+                        <label>From</label>
+                        <input type="text" id="path-from" placeholder="Type alumni name..." autocomplete="off">
+                        <input type="hidden" id="path-from-id">
+                        <div id="path-from-dropdown" class="path-dropdown hidden"></div>
+                    </div>
+                    <div class="path-arrow">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                    <div class="path-input-group">
+                        <label>To</label>
+                        <input type="text" id="path-to" placeholder="Type alumni name..." autocomplete="off">
+                        <input type="hidden" id="path-to-id">
+                        <div id="path-to-dropdown" class="path-dropdown hidden"></div>
+                    </div>
+                    <button id="find-path-btn" class="search-btn path-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        Find Path
+                    </button>
+                </div>
+                <div id="path-result" class="path-result hidden"></div>
+            </div>
+        </section>
+
+        <!-- HOW IT WORKS SECTION -->
+        <section id="how-it-works" class="how-it-works-section">
+            <div class="hiw-toggle" id="hiw-toggle" onclick="toggleHowItWorks()" aria-expanded="false">
+                <div class="hiw-toggle-left">
+                    <div class="hiw-toggle-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </div>
+                    <span>How does the search work?</span>
+                </div>
+                <svg class="hiw-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </div>
+
+            <div class="hiw-body" id="hiw-body" style="display:none">
+                <p class="hiw-intro">
+                    This system uses <strong>two complementary AI techniques</strong> to find the most relevant alumni —
+                    not just those who share keywords with your query, but those who are
+                    semantically and relationally closest to what you're looking for.
+                </p>
+
+                <div class="hiw-cards">
+                    <!-- VECTOR SEARCH CARD -->
+                    <div class="hiw-card vector-card">
+                        <div class="hiw-card-header">
+                            <div class="hiw-card-icon vector-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="hiw-card-title">Vector Search</h4>
+                                <span class="hiw-card-badge">Sentence-BERT + FAISS</span>
+                            </div>
+                        </div>
+                        <div class="hiw-card-body">
+                            <p>
+                                Every alumni profile is converted into a <strong>384-dimensional vector</strong>
+                                using a Sentence-BERT language model. This vector encodes the
+                                <em>semantic meaning</em> of the profile.
+                            </p>
+                            <p>
+                                When you type a query, it is encoded into its own vector using the same model.
+                                FAISS then finds the profiles whose vectors are closest —
+                                a process called <strong>cosine similarity search</strong>.
+                            </p>
+                            <div class="hiw-example">
+                                <span class="hiw-example-label">Why this matters</span>
+                                A search for <em>"AI engineer"</em> will surface profiles that mention
+                                "machine learning practitioner" or "deep learning researcher" — even without
+                                any exact keyword match.
+                            </div>
+                        </div>
+                        <div class="hiw-pipeline">
+                            <div class="hiw-step">Your query</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">SBERT encodes to vector</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">FAISS finds nearest neighbours</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">Top-N candidates ranked by cosine similarity</div>
+                        </div>
+                    </div>
+
+                    <!-- GRAPH SEARCH CARD -->
+                    <div class="hiw-card graph-card">
+                        <div class="hiw-card-header">
+                            <div class="hiw-card-icon graph-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="18" cy="5" r="3"/>
+                                    <circle cx="6" cy="12" r="3"/>
+                                    <circle cx="18" cy="19" r="3"/>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="hiw-card-title">Graph Search</h4>
+                                <span class="hiw-card-badge">NetworkX Property Graph</span>
+                            </div>
+                        </div>
+                        <div class="hiw-card-body">
+                            <p>
+                                All 500 alumni records are loaded into a <strong>property graph</strong> with
+                                7 node types: Alumni, Company, Skill, Department, Batch, Location, and Mentor.
+                            </p>
+                            <p>
+                                For each vector search candidate, a <strong>graph relevance score</strong> is
+                                computed using three signals: <em>PageRank centrality</em>,
+                                <em>entity overlap</em>, and <em>relationship density</em>.
+                            </p>
+                            <div class="hiw-example">
+                                <span class="hiw-example-label">Why this matters</span>
+                                Two profiles may have identical vector scores, but the one who is also a mentor,
+                                worked at two companies you mentioned, and shares a batch with a reference profile
+                                will rank higher.
+                            </div>
+                        </div>
+                        <div class="hiw-pipeline">
+                            <div class="hiw-step">Vector candidates</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">PageRank + entity overlap + density</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">Graph score (0–1)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HYBRID FUSION -->
+                <div class="hiw-fusion-card">
+                    <div class="hiw-fusion-header">
+                        <div class="hiw-card-icon fusion-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </div>
+                        <h4>Hybrid Fusion — The Final Score</h4>
+                    </div>
+                    <p class="hiw-fusion-desc">
+                        The two scores are combined using a configurable <strong>graph weight (α)</strong>
+                        that you can adjust with the slider in the search bar:
+                    </p>
+                    <div class="hiw-formula">
+                        <span class="formula-part vector-part">( 1 − α ) × Vector Score</span>
+                        <span class="formula-plus">+</span>
+                        <span class="formula-part graph-part">α × Graph Score</span>
+                        <span class="formula-equals">=</span>
+                        <span class="formula-part final-part">Final Ranking Score</span>
+                    </div>
+                    <p class="hiw-fusion-note">
+                        At <strong>α = 0.0</strong>, ranking is pure semantic similarity (vector only).
+                        At <strong>α = 1.0</strong>, ranking is purely graph-based (relationship richness).
+                        The default of <strong>α = 0.4</strong> balances both signals.
+                        Each result card also shows a breakdown of its vector score, graph score,
+                        and final score so you can see exactly how the ranking was decided.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="results-section hidden">
+            <div class="results-header">
+                <div class="results-meta">
+                    <h3 id="results-title">Results</h3>
+                    <span id="results-latency" class="latency-badge"></span>
+                    <span id="results-intent" class="intent-badge hidden"></span>
+                    <span id="results-entities" class="entities-badge hidden"></span>
+                </div>
+                <div class="results-controls">
+                    <div id="metrics-status" class="metrics-status hidden" title="System status">
+                        <span class="metrics-dot" id="node2vec-dot"></span>
+                        <span id="node2vec-label">Graph AI</span>
+                    </div>
+                    <button id="export-btn" class="export-btn" title="Export as CSV">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export CSV
+                    </button>
+                    <button id="toggle-view" class="icon-btn" title="Toggle view">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Filter Chips (PRD §3.6) -->
+            <div id="active-filter-chips" class="active-filter-chips hidden"></div>
+
+            <div id="results-grid" class="results-grid">
+                <!-- Result cards rendered by JS -->
+            </div>
+
+            <!-- Pagination Controls (PRD §3.2) -->
+            <div id="pagination-controls" class="pagination-controls hidden">
+                <button class="pagination-btn" id="prev-page-btn" onclick="changePage(-1)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                    Previous
+                </button>
+                <div class="pagination-info">
+                    <span id="pagination-label">Page 1 of 1</span>
+                    <span id="pagination-count" class="pagination-count"></span>
+                </div>
+                <button class="pagination-btn" id="next-page-btn" onclick="changePage(1)">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Empty State / Dashboard -->
+        <section id="empty-state" class="empty-state">
+            <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <line x1="12" y1="1" x2="12" y2="5"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/>
+                    <line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="5" y2="12"/>
+                    <line x1="19" y1="12" x2="23" y2="12"/>
+                </svg>
+            </div>
+            <h3>Explore the Alumni Network</h3>
+            <p>Type a natural language query above or try one of the suggested searches to discover alumni connections.</p>
+
+            <!-- Stats Counter Cards -->
+            <div id="stats-dashboard" class="stats-dashboard">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Dashboard Charts -->
+            <div id="dashboard-charts" class="dashboard-charts">
+                <!-- Top Skills Chart -->
+                <div class="chart-card">
+                    <h4 class="chart-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Top Skills
+                    </h4>
+                    <div id="skills-chart" class="bar-chart"></div>
+                </div>
+
+                <!-- Top Companies Chart -->
+                <div class="chart-card">
+                    <h4 class="chart-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Top Companies
+                    </h4>
+                    <div id="companies-chart" class="bar-chart"></div>
+                </div>
+
+                <!-- Department Distribution -->
+                <div class="chart-card">
+                    <h4 class="chart-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 4 3 6 3s6-1 6-3v-5"/></svg>
+                        Departments
+                    </h4>
+                    <div id="dept-chart" class="bar-chart"></div>
+                </div>
+
+                <!-- Top Locations -->
+                <div class="chart-card">
+                    <h4 class="chart-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Top Locations
+                    </h4>
+                    <div id="locations-chart" class="bar-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Graph Panel (Slide-in) -->
+        <div id="graph-panel" class="graph-panel" style="display:none">
+            <div class="graph-panel-header">
+                <h3 id="graph-panel-title">Graph Neighborhood</h3>
+                <button id="close-graph" class="close-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="graph-legend">
+                <span class="legend-item"><span class="legend-dot" style="background:#6366f1"></span>Alumni</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Company</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span>Skill</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6"></span>Department</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span>Batch</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Location</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#ec4899"></span>Mentor</span>
+            </div>
+            <div id="graph-container" class="graph-container"></div>
+        </div>
+
+        <!-- Profile Detail Modal -->
+        <div id="profile-modal" class="profile-modal" style="display:none">
+            <div class="profile-modal-content">
+                <button id="close-modal" class="close-btn modal-close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                <div id="modal-body" class="modal-body">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookmarks Panel (Slide-in) -->
+        <div id="bookmarks-panel" class="bookmarks-panel" style="display:none">
+            <div class="bookmarks-panel-header">
+                <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Bookmarks
+                </h3>
+                <button id="close-bookmarks" class="close-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="bookmarks-list" class="bookmarks-list">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- Overlay -->
+        <div id="overlay" class="overlay" style="display:none"></div>
+
+        <!-- Connect Modal -->
+        <div id="connect-modal" class="connect-modal" style="display:none" role="dialog" aria-modal="true">
+            <div class="connect-modal-content">
+                <button id="close-connect-modal" class="close-btn connect-close-btn" aria-label="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                <div class="connect-modal-header">
+                    <div class="connect-avatar" id="connect-avatar">AK</div>
+                    <div>
+                        <h3 id="connect-name">Alumni Name</h3>
+                        <p id="connect-role" class="connect-role">Role at Company</p>
+                    </div>
+                </div>
+                <p class="connect-intro">Reach out and start a conversation:</p>
+                <div class="connect-options">
+                    <a id="connect-phone-link" href="#" class="connect-option-card phone-option">
+                        <div class="connect-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.2 0h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L6.27 7.91a16 16 0 006.29 6.29l1.28-1.28a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="connect-option-label">Call</div>
+                            <div class="connect-option-value" id="connect-phone-display">—</div>
+                        </div>
+                        <svg class="connect-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </a>
+                    <a id="connect-email-link" href="#" class="connect-option-card email-option">
+                        <div class="connect-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="connect-option-label">Send Email</div>
+                            <div class="connect-option-value" id="connect-email-display">—</div>
+                        </div>
+                        <svg class="connect-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </a>
+                </div>
+                <p class="connect-note">
+                    Always introduce yourself and mention your shared connection (batch, department, skill) when reaching out.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer id="main-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/>
+                    </svg>
+                    <span>Alumni Graph Search</span>
+                </div>
+                <p class="footer-tagline">AI-powered semantic search over alumni networks</p>
+            </div>
+            <div class="footer-tech">
+                <h4>Powered by</h4>
+                <div class="tech-chips">
+                    <span class="tech-chip"><span class="tech-dot" style="background:#3776AB"></span>Sentence-BERT</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#009688"></span>FastAPI</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#3b82f6"></span>FAISS HNSW</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#f59e0b"></span>NetworkX + PPR</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#8b5cf6"></span>Cross-Encoder</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#ec4899"></span>vis.js</span>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h4>Resources</h4>
+                <a href="/docs" target="_blank">API Documentation</a>
+                <a href="https://github.com/YOUR_ORG/semantic-search-alumni" target="_blank">GitHub Repository</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Built with ❤️ using Semantic AI × Graph Intelligence × Cross-Encoder Reranking</p>
+            <p class="footer-version">v2.0.0 (PRD v2)</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
