@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI-powered semantic search over alumni networks using Sentence-BERT embeddings, FAISS vector indexing, and graph-based relationship traversal.">
-    <title>Alumni Graph Search — Semantic AI-Powered Search</title>
+    <meta name="description" content="AI-powered semantic search over alumni networks using Sentence-BERT, FAISS HNSW, cross-encoder reranking, weighted graph, and personalized PageRank.">
+    <title>Alumni Graph Search — Semantic AI-Powered Search (PRD v2)</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -97,7 +97,7 @@
                     <button class="quick-query" data-query="Alumni from Computer Science who now work at startups in Bangalore">CS alumni in Bangalore startups</button>
                 </div>
 
-                <!-- Filters -->
+                <!-- Filters Row (legacy batch/dept) -->
                 <div class="filters-row">
                     <div class="filter-group">
                         <label for="batch-filter">Batch Year</label>
@@ -120,6 +120,69 @@
                             <span>Vector Only</span>
                             <span>Graph Only</span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Structured Filter Panel (PRD §3.6) -->
+                <div class="structured-filters" id="structured-filters">
+                    <div class="sf-toggle" id="sf-toggle" onclick="toggleStructuredFilters()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                        <span>Advanced Filters</span>
+                        <svg id="sf-chevron" class="sf-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="sf-panel" id="sf-panel">
+                        <div class="sf-grid">
+                            <div class="sf-field">
+                                <label for="sf-company">Company</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-company" placeholder="e.g. Google" list="companies-list" autocomplete="off">
+                                    <datalist id="companies-list"><!-- JS --></datalist>
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-location">Location</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-location" placeholder="e.g. Bangalore" list="locations-list" autocomplete="off">
+                                    <datalist id="locations-list"><!-- JS --></datalist>
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-batch-year">Batch Year / Range</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-batch-year" placeholder="e.g. 2019 or 2015-2020">
+                                </div>
+                            </div>
+                            <div class="sf-field">
+                                <label for="sf-skills">Skills (comma-separated)</label>
+                                <div class="sf-select-wrap">
+                                    <input type="text" id="sf-skills" placeholder="e.g. Python, Machine Learning">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sf-actions">
+                            <button class="sf-apply-btn" id="sf-apply-btn" onclick="applyStructuredFilters()">Apply Filters</button>
+                            <button class="sf-clear-btn" id="sf-clear-btn" onclick="clearStructuredFilters()">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversational Search (PRD §3.14) -->
+                <div class="conv-section" id="conv-section">
+                    <div class="conv-toggle" id="conv-toggle" onclick="toggleConversational()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        <span>Multi-Turn Conversation</span>
+                        <svg id="conv-chevron" class="sf-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="conv-panel" id="conv-panel">
+                        <div class="conv-history" id="conv-history"></div>
+                        <div class="conv-input-row">
+                            <input type="text" id="conv-input" placeholder="Follow up: 'filter to Google', 'from 2020 batch', 'in Bangalore'..." autocomplete="off">
+                            <button class="conv-send-btn" onclick="sendConversationalQuery()" id="conv-send-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                            <button class="sf-clear-btn" onclick="resetConversation()" title="Reset conversation">Reset</button>
+                        </div>
+                        <p class="conv-hint">Try: "Find ML engineers" → "filter to Bangalore" → "from 2019 batch"</p>
                     </div>
                 </div>
 
@@ -323,9 +386,14 @@
                 <div class="results-meta">
                     <h3 id="results-title">Results</h3>
                     <span id="results-latency" class="latency-badge"></span>
+                    <span id="results-intent" class="intent-badge hidden"></span>
                     <span id="results-entities" class="entities-badge hidden"></span>
                 </div>
                 <div class="results-controls">
+                    <div id="metrics-status" class="metrics-status hidden" title="System status">
+                        <span class="metrics-dot" id="node2vec-dot"></span>
+                        <span id="node2vec-label">Graph AI</span>
+                    </div>
                     <button id="export-btn" class="export-btn" title="Export as CSV">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Export CSV
@@ -338,8 +406,27 @@
                 </div>
             </div>
 
+            <!-- Active Filter Chips (PRD §3.6) -->
+            <div id="active-filter-chips" class="active-filter-chips hidden"></div>
+
             <div id="results-grid" class="results-grid">
                 <!-- Result cards rendered by JS -->
+            </div>
+
+            <!-- Pagination Controls (PRD §3.2) -->
+            <div id="pagination-controls" class="pagination-controls hidden">
+                <button class="pagination-btn" id="prev-page-btn" onclick="changePage(-1)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                    Previous
+                </button>
+                <div class="pagination-info">
+                    <span id="pagination-label">Page 1 of 1</span>
+                    <span id="pagination-count" class="pagination-count"></span>
+                </div>
+                <button class="pagination-btn" id="next-page-btn" onclick="changePage(1)">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
             </div>
         </section>
 
@@ -534,9 +621,10 @@
                 <div class="tech-chips">
                     <span class="tech-chip"><span class="tech-dot" style="background:#3776AB"></span>Sentence-BERT</span>
                     <span class="tech-chip"><span class="tech-dot" style="background:#009688"></span>FastAPI</span>
-                    <span class="tech-chip"><span class="tech-dot" style="background:#3b82f6"></span>FAISS</span>
-                    <span class="tech-chip"><span class="tech-dot" style="background:#f59e0b"></span>NetworkX</span>
-                    <span class="tech-chip"><span class="tech-dot" style="background:#8b5cf6"></span>vis.js</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#3b82f6"></span>FAISS HNSW</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#f59e0b"></span>NetworkX + PPR</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#8b5cf6"></span>Cross-Encoder</span>
+                    <span class="tech-chip"><span class="tech-dot" style="background:#ec4899"></span>vis.js</span>
                 </div>
             </div>
             <div class="footer-links">
@@ -546,8 +634,8 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>Built with ❤️ using Semantic AI × Graph Intelligence</p>
-            <p class="footer-version">v1.0.0</p>
+            <p>Built with ❤️ using Semantic AI × Graph Intelligence × Cross-Encoder Reranking</p>
+            <p class="footer-version">v2.0.0 (PRD v2)</p>
         </div>
     </footer>
 

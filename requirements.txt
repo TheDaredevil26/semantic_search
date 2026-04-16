@@ -6,3 +6,8 @@ pandas>=2.2
 networkx>=3.3
 numpy>=1.26
 pydantic>=2.0
+loguru>=0.7         # structured logging (PRD §3.13)
+# Optional — uncomment to enable:
+# node2vec>=0.4    # graph embeddings (PRD §3.9): pip install node2vec
+# openai>=1.0      # LLM conversational search: pip install openai
+# llama-cpp-python>=0.2  # local LLM: pip install llama-cpp-python

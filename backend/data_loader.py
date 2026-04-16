@@ -104,10 +104,12 @@ def _generate_profile_text(row: pd.Series) -> str:
 
 
 def get_unique_values(df: pd.DataFrame) -> dict:
-    """Extract unique values for filters."""
+    """Extract unique values for filters (PRD §3.6 — /api/search/filters)."""
+    all_skills = sorted(set(s for skills in df["skills_list"] for s in skills))
     return {
         "departments": sorted(df["department"].unique().tolist()),
         "batch_years": sorted(df["batch_year"].unique().tolist()),
         "companies": sorted(df["current_company"].unique().tolist()),
         "locations": sorted(df["city"].unique().tolist()),
+        "skills": all_skills,
     }

@@ -1,7 +1,7 @@
 /**
- * Alumni Graph Search — Frontend Application (Enhanced)
- * Features: search, result cards, graph visualization, profile modal,
- * dashboard charts, search history, entity badges, bio snippets
+ * Alumni Graph Search — Frontend Application (PRD v2)
+ * New: pagination, structured filters, conversational search, CE scores,
+ *      intent badges, explainability panels, LRU cache polling
  */
 
 const API_BASE = '';
@@ -16,6 +16,20 @@ let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
 let isBookmarksPanelOpen = false;
 let isListView = false;
 let currentTheme = localStorage.getItem('theme') || 'dark';
+
+// --- Pagination State (PRD §3.2) ---
+let currentPage = 1;
+let totalPages = 1;
+let totalCount = 0;
+let lastSearchBody = null;
+
+// --- Structured Filter State (PRD §3.6) ---
+let activeStructuredFilters = {};
+
+// --- Conversational State (PRD §3.14) ---
+let conversationHistory = [];
+let convOpen = false;
+let sfOpen = false;
 
 // --- DOM Elements ---
 const searchInput = document.getElementById('search-input');
@@ -64,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     applyTheme(currentTheme);
     updateBookmarkBadge();
     createScrollTopButton();
+    // Start metrics polling (PRD §3.13)
+    pollMetrics();
 });
 
 function setupEventListeners() {
@@ -260,40 +276,52 @@ async function apiCall(endpoint, options = {}) {
 
 // --- Search ---
 
-async function performSearch() {
+async function performSearch(page = 1) {
     const query = searchInput.value.trim();
     if (!query) return;
 
-    // Show loading state
     setSearchLoading(true);
     resultsSection.classList.remove('hidden');
     emptyState.classList.add('hidden');
     showLoadingSkeletons();
 
     try {
-        // Build filters
         const selectedBatches = Array.from(batchFilter.selectedOptions).map(o => parseInt(o.value));
         const selectedDepts = Array.from(deptFilter.selectedOptions).map(o => o.value);
         const gw = parseFloat(graphWeight.value) / 100;
 
         const body = {
-            query: query,
-            top_k: 10,
+            query,
+            top_k: 50,
+            page,
+            limit: 20,
             graph_weight: gw,
+            // Legacy filters
+            ...(selectedBatches.length > 0 ? { batch_filter: selectedBatches } : {}),
+            ...(selectedDepts.length > 0 ? { dept_filter: selectedDepts } : {}),
+            // Structured filters (PRD §3.6)
+            ...(activeStructuredFilters.company ? { company_filter: activeStructuredFilters.company } : {}),
+            ...(activeStructuredFilters.location ? { location_filter: activeStructuredFilters.location } : {}),
+            ...(activeStructuredFilters.batch_year ? { batch_year_filter: activeStructuredFilters.batch_year } : {}),
+            ...(activeStructuredFilters.skills && activeStructuredFilters.skills.length
+                ? { skills_filter: activeStructuredFilters.skills } : {}),
         };
-        if (selectedBatches.length > 0) body.batch_filter = selectedBatches;
-        if (selectedDepts.length > 0) body.dept_filter = selectedDepts;
 
-        const data = await apiCall('/api/search', {
-            method: 'POST',
-            body: JSON.stringify(body),
-        });
+        lastSearchBody = body;
+        currentPage = page;
+
+        const data = await apiCall('/api/search', { method: 'POST', body: JSON.stringify(body) });
 
         currentResults = data.results;
+        totalPages = data.total_pages || 1;
+        totalCount = data.total_count || data.total;
+        currentPage = data.page || page;
+
         renderResults(data);
+        renderPagination();
+        renderActiveFilterChips();
         addToHistory(query);
 
-        // Scroll to results
         setTimeout(() => {
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -347,8 +375,22 @@ function replaySearch(query) {
 // --- Render Results ---
 
 function renderResults(data) {
-    resultsTitle.textContent = `${data.total} results for "${data.query}"`;
+    // Results title showing page range
+    const start = (data.page - 1) * data.limit + 1;
+    const end = Math.min(data.page * data.limit, data.total_count);
+    const countLabel = data.total_count > data.limit
+        ? `${start}–${end} of ${data.total_count} results`
+        : `${data.total} results`;
+    resultsTitle.textContent = `${countLabel} for "${data.query}"`;
     resultsLatency.textContent = `${data.latency_ms}ms`;
+
+    // Intent badge (PRD §3.5)
+    const intentEl = document.getElementById('results-intent');
+    if (intentEl && data.intent) {
+        intentEl.textContent = data.intent;
+        intentEl.className = `intent-badge ${data.intent.toLowerCase()}`;
+        intentEl.classList.remove('hidden');
+    }
 
     if (data.results.length === 0) {
         resultsGrid.innerHTML = `
@@ -361,7 +403,6 @@ function renderResults(data) {
 
     resultsGrid.innerHTML = data.results.map((result, index) => createResultCard(result, index)).join('');
 
-    // Animate score bars
     requestAnimationFrame(() => {
         document.querySelectorAll('.score-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.width;
@@ -377,10 +418,29 @@ function createResultCard(result, index) {
     const bio = profile.bio || '';
     const truncatedBio = bio.length > 100 ? bio.substring(0, 100) + '...' : bio;
 
+    // Cross-encoder score row (PRD §3.4)
+    const ceRow = result.cross_encoder_score != null
+        ? `<div class="ce-score-row"><span class="ce-label">CE</span><span class="ce-value">${(result.cross_encoder_score).toFixed(3)}</span></div>`
+        : '';
+
+    // Explainability (PRD §3.16)
+    const explain = result.explain || {};
+    const matchedKws = (explain.matched_keywords || []).map(k => `<span class="explain-kw">${escapeHtml(k)}</span>`).join('');
+    const explainPanel = `
+        <div class="explain-panel" id="explain-${result.id}" style="display:none">
+            <div class="explain-panel-title">Score Breakdown</div>
+            <div class="explain-row"><span class="explain-label">Semantic (SBERT)</span><span class="explain-value">${(explain.semantic_score || 0).toFixed(3)}</span></div>
+            <div class="explain-row"><span class="explain-label">Graph (PPR)</span><span class="explain-value">${(explain.graph_score || 0).toFixed(3)}</span></div>
+            ${explain.cross_encoder_score != null ? `<div class="explain-row"><span class="explain-label">Cross-Encoder</span><span class="explain-value">${explain.cross_encoder_score.toFixed(3)}</span></div>` : ''}
+            ${matchedKws ? `<div class="explain-kws">${matchedKws}</div>` : ''}
+        </div>
+        <button class="explain-toggle-btn" onclick="toggleExplain('${result.id}')">Show score breakdown ▾</button>
+    `;
+
     return `
         <div class="result-card" style="animation-delay: ${delay}s" data-id="${result.id}">
             <div class="card-header">
-                <span class="card-rank">#${index + 1}</span>
+                <span class="card-rank">#${(currentPage - 1) * 20 + index + 1}</span>
                 <div style="display:flex;align-items:center;gap:8px">
                     <button class="bookmark-btn ${isBookmarked(result.id) ? 'bookmarked' : ''}" data-id="${result.id}" onclick="toggleBookmark('${result.id}', '${escapeHtml(profile.full_name)}')" title="Bookmark">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -433,10 +493,14 @@ function createResultCard(result, index) {
                 </div>
             </div>
 
+            ${ceRow}
+
             <div class="card-explanation">
                 <div class="explanation-label">Why this result?</div>
                 <p>${escapeHtml(result.explanation)}</p>
             </div>
+
+            ${explainPanel}
 
             <div class="card-actions">
                 <button class="action-btn primary" onclick="viewGraph('${result.id}', '${escapeHtml(profile.full_name)}')">
@@ -463,6 +527,16 @@ function createResultCard(result, index) {
             </div>
         </div>
     `;
+}
+
+// --- Explainability Toggle (PRD §3.16) ---
+function toggleExplain(id) {
+    const panel = document.getElementById(`explain-${id}`);
+    const btn = panel ? panel.nextElementSibling : null;
+    if (!panel) return;
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (btn) btn.textContent = isHidden ? 'Hide score breakdown ▴' : 'Show score breakdown ▾';
 }
 
 // --- Profile Modal ---
@@ -726,20 +800,41 @@ async function findSimilar(alumniId, name) {
 
 async function loadFilters() {
     try {
-        const data = await apiCall('/api/filters');
+        const data = await apiCall('/api/search/filters');
 
-        // Batch years
+        // Batch years (legacy select)
         batchFilter.innerHTML = data.batch_years.map(y =>
             `<option value="${y}">${y}</option>`
         ).join('');
 
-        // Departments
+        // Departments (legacy select)
         deptFilter.innerHTML = data.departments.map(d =>
             `<option value="${d}">${d}</option>`
         ).join('');
+
+        // Populate datalists for structured filter autocomplete (PRD §3.6)
+        populateFilterDatalist('companies-list', data.companies || []);
+        populateFilterDatalist('locations-list', data.locations || []);
     } catch (error) {
-        console.warn('Failed to load filters:', error);
+        // Fallback to legacy endpoint
+        try {
+            const data = await apiCall('/api/filters');
+            batchFilter.innerHTML = (data.batch_years || []).map(y =>
+                `<option value="${y}">${y}</option>`
+            ).join('');
+            deptFilter.innerHTML = (data.departments || []).map(d =>
+                `<option value="${d}">${d}</option>`
+            ).join('');
+        } catch (e) {
+            console.warn('Failed to load filters:', e);
+        }
     }
+}
+
+function populateFilterDatalist(listId, items) {
+    const dl = document.getElementById(listId);
+    if (!dl) return;
+    dl.innerHTML = items.map(item => `<option value="${escapeHtml(item)}">`).join('');
 }
 
 // --- Stats & Dashboard ---
@@ -1321,4 +1416,273 @@ function toggleHowItWorks() {
         chevron.style.transform = 'rotate(180deg)';
         body.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+}
+
+// ============================================================
+// PRD v2 — New Functions
+// ============================================================
+
+// --- Pagination (PRD §3.2) ---
+
+function renderPagination() {
+    const controls = document.getElementById('pagination-controls');
+    const label    = document.getElementById('pagination-label');
+    const count    = document.getElementById('pagination-count');
+    const prevBtn  = document.getElementById('prev-page-btn');
+    const nextBtn  = document.getElementById('next-page-btn');
+
+    if (!controls) return;
+
+    if (totalPages <= 1) {
+        controls.classList.add('hidden');
+        return;
+    }
+
+    controls.classList.remove('hidden');
+    label.textContent = `Page ${currentPage} of ${totalPages}`;
+    count.textContent = `${totalCount} total results`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+}
+
+function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage < 1 || newPage > totalPages) return;
+    performSearch(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// --- Active Filter Chips (PRD §3.6) ---
+
+function renderActiveFilterChips() {
+    const container = document.getElementById('active-filter-chips');
+    if (!container) return;
+
+    const chips = [];
+    if (activeStructuredFilters.company) {
+        chips.push({ label: `🏢 ${activeStructuredFilters.company}`, key: 'company' });
+    }
+    if (activeStructuredFilters.location) {
+        chips.push({ label: `📍 ${activeStructuredFilters.location}`, key: 'location' });
+    }
+    if (activeStructuredFilters.batch_year) {
+        chips.push({ label: `🎓 ${activeStructuredFilters.batch_year}`, key: 'batch_year' });
+    }
+    if (activeStructuredFilters.skills && activeStructuredFilters.skills.length) {
+        activeStructuredFilters.skills.forEach(s => {
+            chips.push({ label: `⚡ ${s}`, key: 'skill', value: s });
+        });
+    }
+
+    if (chips.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    container.innerHTML = chips.map(c => `
+        <span class="active-chip">
+            ${escapeHtml(c.label)}
+            <span class="chip-x" onclick="removeActiveChip('${c.key}', '${escapeHtml(c.value || '')}')">×</span>
+        </span>
+    `).join('');
+}
+
+function removeActiveChip(key, value) {
+    if (key === 'skill') {
+        activeStructuredFilters.skills = (activeStructuredFilters.skills || []).filter(s => s !== value);
+        if (activeStructuredFilters.skills.length === 0) delete activeStructuredFilters.skills;
+    } else {
+        delete activeStructuredFilters[key];
+    }
+    renderActiveFilterChips();
+    // Re-sync the structured filter panel inputs
+    const sfCompany   = document.getElementById('sf-company');   if (sfCompany)   sfCompany.value   = activeStructuredFilters.company   || '';
+    const sfLocation  = document.getElementById('sf-location');  if (sfLocation)  sfLocation.value  = activeStructuredFilters.location  || '';
+    const sfBatch     = document.getElementById('sf-batch-year');if (sfBatch)     sfBatch.value     = activeStructuredFilters.batch_year || '';
+    const sfSkills    = document.getElementById('sf-skills');    if (sfSkills)    sfSkills.value    = (activeStructuredFilters.skills || []).join(', ');
+    // Re-run search with updated filters
+    performSearch(1);
+}
+
+// --- Structured Filter Panel (PRD §3.6) ---
+
+function toggleStructuredFilters() {
+    sfOpen = !sfOpen;
+    const panel   = document.getElementById('sf-panel');
+    const chevron = document.getElementById('sf-chevron');
+    if (!panel) return;
+    panel.classList.toggle('open', sfOpen);
+    if (chevron) chevron.classList.toggle('open', sfOpen);
+}
+
+function applyStructuredFilters() {
+    const company  = (document.getElementById('sf-company')?.value || '').trim();
+    const location = (document.getElementById('sf-location')?.value || '').trim();
+    const batchYear= (document.getElementById('sf-batch-year')?.value || '').trim();
+    const rawSkills= (document.getElementById('sf-skills')?.value || '').trim();
+
+    activeStructuredFilters = {};
+    if (company)   activeStructuredFilters.company   = company;
+    if (location)  activeStructuredFilters.location  = location;
+    if (batchYear) activeStructuredFilters.batch_year = batchYear;
+    if (rawSkills) activeStructuredFilters.skills = rawSkills.split(',').map(s => s.trim()).filter(Boolean);
+
+    // Re-trigger search from page 1
+    if (searchInput.value.trim()) {
+        performSearch(1);
+    }
+    showToast('Filters applied', 'success');
+}
+
+function clearStructuredFilters() {
+    activeStructuredFilters = {};
+    const sfCompany   = document.getElementById('sf-company');   if (sfCompany)   sfCompany.value   = '';
+    const sfLocation  = document.getElementById('sf-location');  if (sfLocation)  sfLocation.value  = '';
+    const sfBatchYear = document.getElementById('sf-batch-year');if (sfBatchYear) sfBatchYear.value = '';
+    const sfSkills    = document.getElementById('sf-skills');    if (sfSkills)    sfSkills.value    = '';
+    renderActiveFilterChips();
+    if (searchInput.value.trim()) performSearch(1);
+    showToast('Filters cleared', 'info');
+}
+
+// --- Conversational Search (PRD §3.14) ---
+
+function toggleConversational() {
+    convOpen = !convOpen;
+    const panel   = document.getElementById('conv-panel');
+    const chevron = document.getElementById('conv-chevron');
+    if (!panel) return;
+    panel.classList.toggle('open', convOpen);
+    if (chevron) chevron.classList.toggle('open', convOpen);
+}
+
+async function sendConversationalQuery() {
+    const input = document.getElementById('conv-input');
+    const query = (input?.value || '').trim();
+    if (!query) return;
+
+    // Show user bubble immediately
+    addConvBubble('user', query);
+    input.value = '';
+
+    // Append user turn to local history BEFORE sending
+    // (so the server sees it as part of context if needed)
+    conversationHistory.push({ role: 'user', content: query });
+
+    try {
+        const body = {
+            query,
+            // Send FULL history so the server can replay it (stateless resolver)
+            conversation_history: conversationHistory.slice(0, -1), // exclude the turn we just added
+            page: 1,
+            limit: 20,
+        };
+
+        const data = await apiCall('/api/search/conversational', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+
+        // Build assistant message from what the server resolved
+        const resolvedQuery = data.resolved_query || query;
+        const filters       = data.applied_filters || {};
+        const totalFound    = data.total_count ?? data.total ?? 0;
+
+        const filterParts = Object.entries(filters)
+            .filter(([, v]) => v && (!Array.isArray(v) || v.length > 0))
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+
+        const assistantMsg = filterParts.length > 0
+            ? `Found ${totalFound} results. Active filters — ${filterParts.join(' | ')}`
+            : `Found ${totalFound} results for "${resolvedQuery}"`;
+
+        addConvBubble('assistant', assistantMsg);
+
+        // Append assistant turn to local history for next request
+        conversationHistory.push({ role: 'assistant', content: assistantMsg });
+
+        // Update main search bar to show resolved query
+        searchInput.value = resolvedQuery;
+
+        // Render results + pagination using standard render functions
+        currentResults  = data.results;
+        totalPages      = data.total_pages  || 1;
+        totalCount      = data.total_count  ?? data.total ?? 0;
+        currentPage     = data.page         || 1;
+
+        renderResults(data);
+        renderPagination();
+        // Reflect server-applied filters in the active chips row
+        if (filters.company)    activeStructuredFilters.company    = filters.company;
+        if (filters.location)   activeStructuredFilters.location   = filters.location;
+        if (filters.batch_year) activeStructuredFilters.batch_year = filters.batch_year;
+        if (filters.skills && filters.skills.length) activeStructuredFilters.skills = filters.skills;
+        renderActiveFilterChips();
+
+        resultsSection.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+
+    } catch (err) {
+        const errMsg = `Sorry, something went wrong: ${err.message}`;
+        addConvBubble('assistant', errMsg);
+        // Remove the user turn we added since the request failed
+        conversationHistory.pop();
+        showToast(err.message, 'error');
+    }
+}
+
+
+function addConvBubble(role, text) {
+    const history = document.getElementById('conv-history');
+    if (!history) return;
+    const bubble = document.createElement('div');
+    bubble.className = `conv-bubble ${role}`;
+    bubble.textContent = text;
+    history.appendChild(bubble);
+    history.scrollTop = history.scrollHeight;
+}
+
+function resetConversation() {
+    conversationHistory = [];
+    const history = document.getElementById('conv-history');
+    if (history) history.innerHTML = '';
+    addConvBubble('assistant', 'Conversation reset. Start a new search!');
+    showToast('Conversation reset', 'info');
+}
+
+// Also allow Enter key on conversational input
+document.addEventListener('DOMContentLoaded', () => {
+    const convInput = document.getElementById('conv-input');
+    if (convInput) {
+        convInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') sendConversationalQuery();
+        });
+    }
+});
+
+// --- Metrics Polling (PRD §3.13) ---
+
+async function pollMetrics() {
+    try {
+        const data = await apiCall('/api/metrics');
+        const dot   = document.getElementById('node2vec-dot');
+        const label = document.getElementById('node2vec-label');
+        const status = document.getElementById('metrics-status');
+
+        if (dot && label && status) {
+            status.classList.remove('hidden');
+            if (data.node2vec_ready) {
+                dot.className = 'metrics-dot ready';
+                label.textContent = 'Graph AI Ready';
+            } else {
+                dot.className = 'metrics-dot loading';
+                label.textContent = 'Graph AI Loading…';
+            }
+        }
+    } catch (e) {
+        // Metrics endpoint not ready yet — retry
+    }
+    // Poll every 15s
+    setTimeout(pollMetrics, 15000);
 }
