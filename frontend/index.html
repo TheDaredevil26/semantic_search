@@ -104,12 +104,14 @@
                         <select id="batch-filter" multiple>
                             <!-- Populated via JS -->
                         </select>
+                        <div id="batch-chips" class="filter-chips"></div>
                     </div>
                     <div class="filter-group">
                         <label for="dept-filter">Department</label>
                         <select id="dept-filter" multiple>
                             <!-- Populated via JS -->
                         </select>
+                        <div id="dept-chips" class="filter-chips"></div>
                     </div>
                     <div class="filter-group slider-group">
                         <label for="graph-weight">Graph Weight: <span id="graph-weight-value">0.40</span></label>
@@ -166,6 +168,152 @@
                     </button>
                 </div>
                 <div id="path-result" class="path-result hidden"></div>
+            </div>
+        </section>
+
+        <!-- HOW IT WORKS SECTION -->
+        <section id="how-it-works" class="how-it-works-section">
+            <div class="hiw-toggle" id="hiw-toggle" onclick="toggleHowItWorks()" aria-expanded="false">
+                <div class="hiw-toggle-left">
+                    <div class="hiw-toggle-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </div>
+                    <span>How does the search work?</span>
+                </div>
+                <svg class="hiw-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </div>
+
+            <div class="hiw-body" id="hiw-body" style="display:none">
+                <p class="hiw-intro">
+                    This system uses <strong>two complementary AI techniques</strong> to find the most relevant alumni —
+                    not just those who share keywords with your query, but those who are
+                    semantically and relationally closest to what you're looking for.
+                </p>
+
+                <div class="hiw-cards">
+                    <!-- VECTOR SEARCH CARD -->
+                    <div class="hiw-card vector-card">
+                        <div class="hiw-card-header">
+                            <div class="hiw-card-icon vector-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="hiw-card-title">Vector Search</h4>
+                                <span class="hiw-card-badge">Sentence-BERT + FAISS</span>
+                            </div>
+                        </div>
+                        <div class="hiw-card-body">
+                            <p>
+                                Every alumni profile is converted into a <strong>384-dimensional vector</strong>
+                                using a Sentence-BERT language model. This vector encodes the
+                                <em>semantic meaning</em> of the profile.
+                            </p>
+                            <p>
+                                When you type a query, it is encoded into its own vector using the same model.
+                                FAISS then finds the profiles whose vectors are closest —
+                                a process called <strong>cosine similarity search</strong>.
+                            </p>
+                            <div class="hiw-example">
+                                <span class="hiw-example-label">Why this matters</span>
+                                A search for <em>"AI engineer"</em> will surface profiles that mention
+                                "machine learning practitioner" or "deep learning researcher" — even without
+                                any exact keyword match.
+                            </div>
+                        </div>
+                        <div class="hiw-pipeline">
+                            <div class="hiw-step">Your query</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">SBERT encodes to vector</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">FAISS finds nearest neighbours</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">Top-N candidates ranked by cosine similarity</div>
+                        </div>
+                    </div>
+
+                    <!-- GRAPH SEARCH CARD -->
+                    <div class="hiw-card graph-card">
+                        <div class="hiw-card-header">
+                            <div class="hiw-card-icon graph-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="18" cy="5" r="3"/>
+                                    <circle cx="6" cy="12" r="3"/>
+                                    <circle cx="18" cy="19" r="3"/>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="hiw-card-title">Graph Search</h4>
+                                <span class="hiw-card-badge">NetworkX Property Graph</span>
+                            </div>
+                        </div>
+                        <div class="hiw-card-body">
+                            <p>
+                                All 500 alumni records are loaded into a <strong>property graph</strong> with
+                                7 node types: Alumni, Company, Skill, Department, Batch, Location, and Mentor.
+                            </p>
+                            <p>
+                                For each vector search candidate, a <strong>graph relevance score</strong> is
+                                computed using three signals: <em>PageRank centrality</em>,
+                                <em>entity overlap</em>, and <em>relationship density</em>.
+                            </p>
+                            <div class="hiw-example">
+                                <span class="hiw-example-label">Why this matters</span>
+                                Two profiles may have identical vector scores, but the one who is also a mentor,
+                                worked at two companies you mentioned, and shares a batch with a reference profile
+                                will rank higher.
+                            </div>
+                        </div>
+                        <div class="hiw-pipeline">
+                            <div class="hiw-step">Vector candidates</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">PageRank + entity overlap + density</div>
+                            <div class="hiw-step-arrow">→</div>
+                            <div class="hiw-step">Graph score (0–1)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HYBRID FUSION -->
+                <div class="hiw-fusion-card">
+                    <div class="hiw-fusion-header">
+                        <div class="hiw-card-icon fusion-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </div>
+                        <h4>Hybrid Fusion — The Final Score</h4>
+                    </div>
+                    <p class="hiw-fusion-desc">
+                        The two scores are combined using a configurable <strong>graph weight (α)</strong>
+                        that you can adjust with the slider in the search bar:
+                    </p>
+                    <div class="hiw-formula">
+                        <span class="formula-part vector-part">( 1 − α ) × Vector Score</span>
+                        <span class="formula-plus">+</span>
+                        <span class="formula-part graph-part">α × Graph Score</span>
+                        <span class="formula-equals">=</span>
+                        <span class="formula-part final-part">Final Ranking Score</span>
+                    </div>
+                    <p class="hiw-fusion-note">
+                        At <strong>α = 0.0</strong>, ranking is pure semantic similarity (vector only).
+                        At <strong>α = 1.0</strong>, ranking is purely graph-based (relationship richness).
+                        The default of <strong>α = 0.4</strong> balances both signals.
+                        Each result card also shows a breakdown of its vector score, graph score,
+                        and final score so you can see exactly how the ranking was decided.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -312,6 +460,60 @@
 
         <!-- Overlay -->
         <div id="overlay" class="overlay" style="display:none"></div>
+
+        <!-- Connect Modal -->
+        <div id="connect-modal" class="connect-modal" style="display:none" role="dialog" aria-modal="true">
+            <div class="connect-modal-content">
+                <button id="close-connect-modal" class="close-btn connect-close-btn" aria-label="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                <div class="connect-modal-header">
+                    <div class="connect-avatar" id="connect-avatar">AK</div>
+                    <div>
+                        <h3 id="connect-name">Alumni Name</h3>
+                        <p id="connect-role" class="connect-role">Role at Company</p>
+                    </div>
+                </div>
+                <p class="connect-intro">Reach out and start a conversation:</p>
+                <div class="connect-options">
+                    <a id="connect-phone-link" href="#" class="connect-option-card phone-option">
+                        <div class="connect-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.2 0h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L6.27 7.91a16 16 0 006.29 6.29l1.28-1.28a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="connect-option-label">Call</div>
+                            <div class="connect-option-value" id="connect-phone-display">—</div>
+                        </div>
+                        <svg class="connect-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </a>
+                    <a id="connect-email-link" href="#" class="connect-option-card email-option">
+                        <div class="connect-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="connect-option-label">Send Email</div>
+                            <div class="connect-option-value" id="connect-email-display">—</div>
+                        </div>
+                        <svg class="connect-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </a>
+                </div>
+                <p class="connect-note">
+                    Always introduce yourself and mention your shared connection (batch, department, skill) when reaching out.
+                </p>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -340,7 +542,7 @@
             <div class="footer-links">
                 <h4>Resources</h4>
                 <a href="/docs" target="_blank">API Documentation</a>
-                <a href="https://github.com" target="_blank">GitHub Repository</a>
+                <a href="https://github.com/YOUR_ORG/semantic-search-alumni" target="_blank">GitHub Repository</a>
             </div>
         </div>
         <div class="footer-bottom">

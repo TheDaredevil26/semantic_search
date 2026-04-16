@@ -49,6 +49,8 @@ class HybridSearchEngine:
                 "skills": row["skills"],
                 "bio": row["bio"],
                 "mentor_id": row.get("mentor_id", ""),
+                "phone": row.get("phone", "N/A"),
+                "email": row.get("email", "N/A"),
             }
 
     def search(self, query: str, top_k: int = 10,
@@ -155,6 +157,8 @@ class HybridSearchEngine:
                     "skills": cand["profile"]["skills_list"],
                     "bio": cand["profile"]["bio"],
                     "mentor_id": cand["profile"].get("mentor_id", ""),
+                    "phone": cand["profile"].get("phone", "N/A"),
+                    "email": cand["profile"].get("email", "N/A"),
                 }
             })
 
@@ -223,7 +227,7 @@ class HybridSearchEngine:
             max_gs = max(c["graph_score"] for c in candidates) or 1.0
 
             for cand in candidates:
-                norm_vs = (cand["vector_score"] - min_vs) / vs_range
+                norm_vs = (cand["vector_score"] - min_vs) / vs_range if vs_range > 0 else cand["vector_score"]
                 norm_gs = cand["graph_score"] / max_gs if max_gs > 0 else 0
                 cand["final_score"] = round(vw * norm_vs + gw * norm_gs, 4)
 
@@ -249,6 +253,8 @@ class HybridSearchEngine:
                     "skills": cand["profile"]["skills_list"],
                     "bio": cand["profile"]["bio"],
                     "mentor_id": cand["profile"].get("mentor_id", ""),
+                    "phone": cand["profile"].get("phone", "N/A"),
+                    "email": cand["profile"].get("email", "N/A"),
                 }
             })
 

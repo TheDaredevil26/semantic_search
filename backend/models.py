@@ -7,7 +7,7 @@ from typing import List, Optional
 
 class SearchRequest(BaseModel):
     """Request body for the /api/search endpoint."""
-    query: str = Field(..., description="Natural language search query")
+    query: str = Field(..., max_length=500, description="Natural language search query")
     top_k: int = Field(default=10, ge=1, le=50, description="Number of results to return")
     batch_filter: Optional[List[int]] = Field(default=None, description="Filter by graduation year(s)")
     dept_filter: Optional[List[str]] = Field(default=None, description="Filter by department(s)")
@@ -26,6 +26,8 @@ class AlumniProfile(BaseModel):
     skills: List[str]
     bio: str
     mentor_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
 
 
 class SearchResultItem(BaseModel):

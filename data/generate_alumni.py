@@ -4,6 +4,7 @@ Generates 500 realistic alumni records with diverse career trajectories.
 """
 import csv
 import random
+import re
 import uuid
 import os
 import sys
@@ -261,6 +262,29 @@ PROJECTS = [
     "educational technology tools"
 ]
 
+MOBILE_PREFIXES = ["98", "97", "96", "95", "94", "93", "91", "89", "88", "87", "86", "79", "78", "77"]
+
+
+def generate_phone():
+    """Generate a plausible Indian mobile number (10 digits, starts with 6-9)."""
+    prefix = random.choice(MOBILE_PREFIXES)
+    suffix = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+    return f"+91 {prefix}{suffix[:4]} {suffix[4:]}"
+
+
+def generate_email(full_name: str, company: str) -> str:
+    """Derive a realistic work email from name and company."""
+    parts = full_name.lower().split()
+    first = re.sub(r'[^a-z]', '', parts[0])
+    last  = re.sub(r'[^a-z]', '', parts[-1]) if len(parts) > 1 else ""
+    domain_slug = re.sub(r'[^a-z0-9]', '', company.lower())[:12]
+    formats = [
+        f"{first}.{last}@{domain_slug}.com",
+        f"{first[0]}{last}@{domain_slug}.com",
+        f"{first}_{last}@{domain_slug}.in",
+    ]
+    return random.choice(formats)
+
 
 def generate_bio(dept, skills):
     """Generate a realistic bio for an alumnus."""
@@ -444,6 +468,8 @@ def generate_alumni(num_records=500):
             "skills": skills_str,
             "bio": bio,
             "mentor_id": mentor_id,
+            "phone": generate_phone(),
+            "email": generate_email(full_name, company),
         })
 
     # Ensure Priya Ramesh exists for demo queries
@@ -459,6 +485,8 @@ def generate_alumni(num_records=500):
         "skills": "Python, Machine Learning, TensorFlow, React, Deep Learning, Docker",
         "bio": "Passionate about building scalable AI systems. Led ML pipeline development at Google. Active open source contributor and tech community speaker. Previously interned at Microsoft Research.",
         "mentor_id": "Dr. Sharma",
+        "phone": generate_phone(),
+        "email": "priya.ramesh@google.com",
     }
 
     return records
@@ -469,7 +497,8 @@ def write_csv(records, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fieldnames = [
         "alumnus_id", "full_name", "batch_year", "department",
-        "current_company", "current_role", "city", "skills", "bio", "mentor_id"
+        "current_company", "current_role", "city", "skills", "bio", "mentor_id",
+        "phone", "email"
     ]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

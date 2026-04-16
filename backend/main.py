@@ -4,6 +4,8 @@ FastAPI Backend — Main application with REST endpoints for semantic search.
 import time
 import os
 import sys
+import subprocess
+from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from collections import Counter
 
-from config import FRONTEND_DIR, ALUMNI_CSV_PATH
+from config import FRONTEND_DIR, ALUMNI_CSV_PATH, DATA_DIR
 from backend.models import SearchRequest, SearchResponse, FilterOptions, StatsResponse, GraphData
 from backend.data_loader import load_alumni_data, get_unique_values
 from backend.graph_builder import AlumniGraph
@@ -22,22 +24,6 @@ from backend.entity_extractor import EntityExtractor
 from backend.search_engine import HybridSearchEngine
 
 
-# --- Application Setup ---
-app = FastAPI(
-    title="Semantic Search on Alumni Graph",
-    description="AI-powered semantic search over alumni networks using SBERT + FAISS + Graph scoring",
-    version="1.0.0",
-)
-
-# CORS — allow frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # --- Global State ---
 search_engine: HybridSearchEngine = None
 alumni_graph: AlumniGraph = None
@@ -45,8 +31,7 @@ df = None
 unique_values = None
 
 
-@app.on_event("startup")
-async def startup():
+async def startup_logic():
     """Initialize all components on server startup."""
     global search_engine, alumni_graph, df, unique_values
 
@@ -59,9 +44,10 @@ async def startup():
     # 1. Generate data if needed
     if not os.path.exists(ALUMNI_CSV_PATH):
         print("\n[1/4] Generating alumni data...")
-        from data.generate_alumni import generate_alumni, write_csv
-        records = generate_alumni(500)
-        write_csv(records, ALUMNI_CSV_PATH)
+        subprocess.run(
+            [sys.executable, os.path.join(DATA_DIR, "generate_alumni.py")],
+            check=True
+        )
     else:
         print("\n[1/4] Alumni data found.")
 
@@ -70,10 +56,21 @@ async def startup():
     df = load_alumni_data()
     unique_values = get_unique_values(df)
 
-    # 3. Build graph
-    print("\n[3/4] Building alumni graph...")
-    alumni_graph = AlumniGraph()
-    alumni_graph.build_from_dataframe(df)
+    # 3. Build graph (try loading from cache first)
+    loaded_graph = None
+    try:
+        loaded_graph = AlumniGraph.load()
+    except Exception:
+        pass
+
+    if loaded_graph is not None:
+        alumni_graph = loaded_graph
+        print("\n[3/4] Graph loaded from cache.")
+    else:
+        print("\n[3/4] Building alumni graph from scratch...")
+        alumni_graph = AlumniGraph()
+        alumni_graph.build_from_dataframe(df)
+        alumni_graph.save()
 
     # 4. Build/load embeddings and FAISS index
     print("\n[4/4] Building embeddings & FAISS index...")
@@ -101,6 +98,30 @@ async def startup():
     print(f"  API Docs: http://localhost:8000/docs")
     print(f"  Frontend: http://localhost:8000")
     print(f"{'=' * 60}\n")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await startup_logic()
+    yield
+
+
+# --- Application Setup ---
+app = FastAPI(
+    title="Semantic Search on Alumni Graph",
+    description="AI-powered semantic search over alumni networks using SBERT + FAISS + Graph scoring",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS — allow frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # --- Serve Frontend ---
@@ -164,6 +185,8 @@ async def get_alumni(alumnus_id: str):
         "skills": r["skills_list"],
         "bio": r["bio"],
         "mentor_id": r.get("mentor_id", ""),
+        "phone": r.get("phone", "N/A"),
+        "email": r.get("email", "N/A"),
     }
 
 

@@ -112,6 +112,10 @@ function setupEventListeners() {
         graphWeightValue.textContent = (graphWeight.value / 100).toFixed(2);
     });
 
+    // Filter selection → render chips
+    batchFilter.addEventListener('change', () => renderFilterChips(batchFilter, 'batch-chips'));
+    deptFilter.addEventListener('change', () => renderFilterChips(deptFilter, 'dept-chips'));
+
     // Close graph
     closeGraphBtn.addEventListener('click', closeGraph);
     overlay.addEventListener('click', () => {
@@ -205,6 +209,7 @@ function navigateAutocomplete(dir) {
     activeAcIndex = Math.max(-1, Math.min(items.length - 1, activeAcIndex + dir));
     if (activeAcIndex >= 0) {
         items[activeAcIndex].classList.add('active');
+        items[activeAcIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         searchInput.value = items[activeAcIndex].querySelector('.ac-text').textContent;
     }
 }
@@ -442,6 +447,19 @@ function createResultCard(result, index) {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M3 21v-2a4 4 0 013-3.87"/></svg>
                     Find Similar
                 </button>
+                <button class="connect-btn"
+                    data-id="${result.id}"
+                    data-name="${escapeHtml(profile.full_name)}"
+                    data-phone="${escapeHtml(profile.phone || '')}"
+                    data-email="${escapeHtml(profile.email || '')}"
+                    data-role="${escapeHtml(profile.current_role)} at ${escapeHtml(profile.current_company)}"
+                    onclick="openConnectModal(this)"
+                    title="Connect with ${escapeHtml(profile.full_name)}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.2 0h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L6.27 7.91a16 16 0 006.29 6.29l1.28-1.28a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                    </svg>
+                    Connect
+                </button>
             </div>
         </div>
     `;
@@ -497,6 +515,29 @@ function renderProfileModal(profile) {
         <div class="modal-section-title">Skills</div>
         <div class="modal-skills">
             ${skills.map(skill => `<span class="skill-chip">${escapeHtml(skill)}</span>`).join('')}
+        </div>
+
+        <div class="modal-divider"></div>
+        <div class="modal-section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.2 0h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L6.27 7.91a16 16 0 006.29 6.29l1.28-1.28a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+            Contact
+        </div>
+        <div class="modal-contact-row">
+            <a class="modal-contact-chip phone-chip" href="tel:${escapeHtml(profile.phone || '')}" title="Call">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.2 0h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L6.27 7.91a16 16 0 006.29 6.29l1.28-1.28a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                ${escapeHtml(profile.phone || 'Not available')}
+            </a>
+            <a class="modal-contact-chip email-chip" href="mailto:${escapeHtml(profile.email || '')}" title="Email">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                ${escapeHtml(profile.email || 'Not available')}
+            </a>
         </div>
 
         ${profile.mentor_id ? `
@@ -936,6 +977,33 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
+function renderFilterChips(selectEl, chipsContainerId) {
+    const container = document.getElementById(chipsContainerId);
+    const selected = Array.from(selectEl.selectedOptions);
+
+    // Toggle has-selection class on the select
+    selectEl.classList.toggle('has-selection', selected.length > 0);
+
+    if (selected.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = selected.map(opt => `
+        <span class="filter-chip" data-value="${escapeHtml(opt.value)}">
+            ${escapeHtml(opt.textContent)}
+            <span class="chip-remove" onclick="removeFilterOption('${selectEl.id}', '${escapeHtml(opt.value)}', '${chipsContainerId}')">&times;</span>
+        </span>
+    `).join('');
+}
+
+function removeFilterOption(selectId, value, chipsContainerId) {
+    const selectEl = document.getElementById(selectId);
+    const option = Array.from(selectEl.options).find(o => o.value === value);
+    if (option) option.selected = false;
+    renderFilterChips(selectEl, chipsContainerId);
+}
+
 // --- Path Finder ---
 
 (function initPathFinder() {
@@ -1194,4 +1262,63 @@ function createScrollTopButton() {
     window.addEventListener('scroll', () => {
         btn.classList.toggle('visible', window.scrollY > 400);
     }, { passive: true });
+}
+
+// --- Connect Modal ---
+
+const connectModal = document.getElementById('connect-modal');
+const closeConnectBtn = document.getElementById('close-connect-modal');
+
+if (closeConnectBtn) {
+    closeConnectBtn.addEventListener('click', () => {
+        connectModal.style.display = 'none';
+        overlay.style.display = 'none';
+        overlay.classList.remove('visible');
+    });
+}
+
+function openConnectModal(btn) {
+    const name  = btn.dataset.name;
+    const phone = btn.dataset.phone || 'Not available';
+    const email = btn.dataset.email || 'Not available';
+    const role  = btn.dataset.role || '';
+
+    // Avatar initials
+    const initials = name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('connect-avatar').textContent       = initials;
+    document.getElementById('connect-name').textContent         = name;
+    document.getElementById('connect-role').textContent         = role;
+    document.getElementById('connect-phone-display').textContent = phone;
+    document.getElementById('connect-email-display').textContent = email;
+
+    const phoneLink = document.getElementById('connect-phone-link');
+    const emailLink = document.getElementById('connect-email-link');
+    phoneLink.href  = phone !== 'Not available' ? `tel:${phone}` : '#';
+    emailLink.href  = email !== 'Not available' ? `mailto:${email}` : '#';
+
+    connectModal.style.display = 'flex';
+    overlay.style.display      = 'block';
+    requestAnimationFrame(() => {
+        overlay.classList.add('visible');
+    });
+}
+
+// --- How It Works Toggle ---
+
+function toggleHowItWorks() {
+    const body    = document.getElementById('hiw-body');
+    const toggle  = document.getElementById('hiw-toggle');
+    const chevron = toggle.querySelector('.hiw-chevron');
+    const isOpen  = body.style.display !== 'none';
+
+    if (isOpen) {
+        body.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        body.style.display = 'block';
+        toggle.setAttribute('aria-expanded', 'true');
+        chevron.style.transform = 'rotate(180deg)';
+        body.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }

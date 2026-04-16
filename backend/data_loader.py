@@ -64,6 +64,16 @@ def load_alumni_data(csv_path: str = None) -> pd.DataFrame:
     # Parse mentor_id
     df["mentor_id"] = df["mentor_id"].fillna("").astype(str).str.strip()
 
+    # Keep phone and email; fill missing values gracefully
+    if "phone" in df.columns:
+        df["phone"] = df["phone"].fillna("N/A").astype(str).str.strip()
+    else:
+        df["phone"] = "N/A"
+    if "email" in df.columns:
+        df["email"] = df["email"].fillna("N/A").astype(str).str.strip()
+    else:
+        df["email"] = "N/A"
+
     # Ensure alumnus_id is string
     df["alumnus_id"] = df["alumnus_id"].astype(str)
 
