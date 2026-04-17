@@ -122,45 +122,75 @@ export default function GraphCanvas({ graphData, onNodeDoubleClick, clusterBy })
   }, [graphData, onNodeDoubleClick]);
 
   useEffect(() => {
-    if (!networkRef.current) return;
+    if (!networkRef.current || !graphData) return;
 
-    // First uncluster everything
-    const clusterNodes = networkRef.current.body.nodeIndices.filter(id => id.toString().startsWith('cluster_'));
-    for (const cid of clusterNodes) {
-      if (networkRef.current.isCluster(cid)) {
-        networkRef.current.openCluster(cid);
+    // Safely open any existing clusters
+    const existingNodes = Object.keys(networkRef.current.body.nodes);
+    existingNodes.forEach(nodeId => {
+      try {
+        if (networkRef.current.isCluster(nodeId)) {
+          networkRef.current.openCluster(nodeId);
+        }
+      } catch (e) {
+        // Ignore vis-network physics errors when unclustering
       }
-    }
+    });
 
-    if (clusterBy) {
-       const clusterOptionsByData = {
+    if (clusterBy && graphData.nodes && graphData.edges) {
+      // Find all target nodes (e.g., all distinct Companies or Skills)
+      const targetNodes = graphData.nodes.filter(n => (n.group || '').toLowerCase() === clusterBy);
+
+      targetNodes.forEach(targetNode => {
+        // Find alumni connected to this target node
+        const connectedEdges = graphData.edges.filter(e => 
+          (e.from === targetNode.id || e.source === targetNode.id) || 
+          (e.to === targetNode.id || e.target === targetNode.id)
+        );
+        
+        const connectedNodeIds = new Set();
+        connectedEdges.forEach(e => {
+          const fromId = e.from || e.source;
+          const toId = e.to || e.target;
+          connectedNodeIds.add(fromId === targetNode.id ? toId : fromId);
+        });
+
+        // We only cluster if there are connected nodes to group
+        if (connectedNodeIds.size === 0) return;
+
+        networkRef.current.cluster({
           joinCondition: function (childOptions) {
-             return (childOptions.group || '').toLowerCase() === clusterBy;
+             const isTargetMatch = childOptions.id === targetNode.id;
+             const isConnectedAlumni = connectedNodeIds.has(childOptions.id) && (childOptions.group || '').toLowerCase() === 'alumni';
+             return isTargetMatch || isConnectedAlumni;
           },
           processProperties: function (clusterOptions, childNodes) {
              let totalMass = 0;
+             let alumniCount = 0;
              for (let i = 0; i < childNodes.length; i++) {
                  totalMass += childNodes[i].mass;
+                 if ((childNodes[i].group || '').toLowerCase() === 'alumni') alumniCount++;
              }
              clusterOptions.mass = totalMass;
+             clusterOptions.label = `${targetNode.name || targetNode.label || targetNode.id}\n(${alumniCount} Alumni)`;
              return clusterOptions;
           },
           clusterNodeProperties: {
-             id: 'cluster_' + clusterBy + '_' + Math.random(),
+             id: 'cluster_' + targetNode.id,
              borderWidth: 3,
              shape: 'hexagon',
              color: {
                 background: '#E0E7FF',
-                border: '#6366F1'
+                border: '#6366F1',
+                highlight: { background: '#C7D2FE', border: '#4F46E5' }
              },
-             label: `Grouped ${clusterBy}s`,
-             size: 40,
-             font: { size: 14, color: '#3730A3', bold: true }
+             size: Math.min(60, 25 + (connectedNodeIds.size * 3)),
+             font: { size: 12, color: '#312E81', face: 'Inter', bold: true },
+             shadow: { enabled: true, color: 'rgba(99, 102, 241, 0.2)', size: 10 }
           }
-       };
-       networkRef.current.cluster(clusterOptionsByData);
+        });
+      });
     }
-  }, [clusterBy]);
+  }, [clusterBy, graphData]);
 
   return (
     <div className="w-full h-full relative graph-canvas-container bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
