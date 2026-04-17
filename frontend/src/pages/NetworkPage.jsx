@@ -62,8 +62,8 @@ export default function NetworkPage({ onOpenProfile }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-57px)] max-w-[1600px] mx-auto px-4 py-4 gap-4 animate-fade-in">
-      <div className="flex items-center justify-between relative z-[60]">
+    <div className="flex flex-col h-[calc(100vh-57px)] max-w-1600px mx-auto px-4 py-4 gap-4 animate-fade-in">
+      <div className="flex items-center justify-between" style={{ position: 'relative', zIndex: 99999 }}>
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           Network Graph
           {centerNode.name && (
@@ -97,7 +97,7 @@ export default function NetworkPage({ onOpenProfile }) {
               className="w-full px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 placeholder:text-gray-400 bg-white shadow-sm"
             />
             {rootList.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-lg shadow-md max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-lg shadow-md max-h-64 overflow-y-auto z-50">
                 {rootList.map(item => (
                   <div
                     key={item.id}
@@ -128,7 +128,7 @@ export default function NetworkPage({ onOpenProfile }) {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0" style={{ position: 'relative', zIndex: 1 }}>
         <div className="flex-1 flex flex-col gap-4 min-w-0">
           {/* Path Finder */}
           <PathFinder onViewGraph={handleViewGraphFromPath} />
