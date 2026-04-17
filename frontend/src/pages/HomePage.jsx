@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/search/SearchBar';
 import { useStats } from '../hooks/useStats';
+import HowItWorks from '../components/home/HowItWorks';
 
 /**
  * HomePage — Landing page with hero search and stats dashboard.
@@ -42,7 +43,7 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto mt-8 relative z-10">
             <SearchBar
               value=""
-              onChange={() => {}}
+              onChange={() => { }}
               onSearch={handleSearch}
               placeholder="e.g., 'Software engineers in London who shifted to PM'"
               showQuickQueries={true}
@@ -90,6 +91,9 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {/* How It Works Section */}
+      <HowItWorks />
     </div>
   );
 }
