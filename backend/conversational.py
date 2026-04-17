@@ -70,28 +70,54 @@ _BATCH_OPEN = re.compile(
     re.I,
 )
 
-# Location: "in X" / "based in X" / "located in X"
-# Excludes batch/from/to/and/onwards to prevent ambiguous matches with year ranges
+# Shared transition keywords that terminate a filter value match
+_BREAK_WORDS = (
+    r"at|in|from|with|who|skilled|knowing|batch|company|dept|department|"
+    r"onwards?|between|and|or|joined|living|located|based"
+)
+_BREAKER = rf"(?:\s+(?:{_BREAK_WORDS})|[,.]|$)"
+
+# Location: "in X" / "based in X" / "located in X" / "from X"
+# Captures lists e.g., "from Delhi, Mumbai and Bangalore"
 _LOCATION_PATTERN = re.compile(
-    r"\b(?:in|based in|located in|living in)\s+([A-Z][A-Za-z\s]{1,30}?)(?:\s+(?:batch|company|department|from|to|and|\d{4}|onwards?)|[,.]|$)",
+    rf"\b(?:in|based in|located in|living in|from)\s+([A-Za-z\'\s,]+?(?:\s+(?:and|or)\s+[A-Za-z\'\s]+?)?)(?={_BREAKER})",
     re.I
 )
 
 # Words that must never be treated as location names
 _LOCATION_DENY = {
     "batch", "batches", "that", "the", "a", "an", "my", "our", "onwards",
-    "this", "all", "india", "us", "uk", "usa",  # keep very small; real cities are fine
+    "this", "all", "india", "us", "uk", "usa",
+    "cs", "it", "ece", "eee", "mech", "civil", "chemical", "biotech",
+    "ai", "ml", "ds", "nlp", "cv", "cloud", "devops",
+    "computer science", "information technology", "electronics", "communication",
+    "electronics & communication", "biotechnology", "electrical engineering", 
+    "mechanical engineering", "chemical engineering", "civil engineering",
+    "department", "dept", "engineering", "development", "data science",
+    "machine learning", "artificial intelligence"
 }
 
-# Company: "at X" / "working at X" / "filter to X" / "only X" / "at company X"
+# Whitelist of cities to catch mentions WITHOUT an "in/from" prefix
+_KNOWN_CITIES = {
+    "hyderabad", "chennai", "bangalore", "mumbai", "pune", "toronto", "dublin", 
+    "coimbatore", "seattle", "singapore", "noida", "kolkata", "berlin", "kochi", 
+    "chandigarh", "san francisco", "jaipur", "ahmedabad", "delhi ncr", "tokyo", 
+    "gurgaon", "amsterdam", "indore", "london", "new york", "delhi", "new delhi"
+}
+_NAKED_LOCATION = re.compile(
+    rf"\b({'|'.join(re.escape(c) for c in _KNOWN_CITIES)})\b",
+    re.I
+)
+
+# Company: "at X" / "working at X" / "filter to X" / "at company X"
 _COMPANY_PATTERN = re.compile(
-    r"\b(?:(?:working\s+at|joined|at(?:\s+company)?|filter\s+(?:to|by)|only|show(?:\s+from)?)\s+)([A-Z][A-Za-z0-9 &.]{0,40}?)(?:\s+(?:in|and|from|\d{4})|[,.]|$)",
+    rf"\b(?:(?:working\s+at|joined|at(?:\s+company)?|filter\s+(?:to|by)|company)\s+)([A-Z][A-Za-z0-9 &.]{{0,40}}?)(?={_BREAKER})",
     re.I
 )
 
 # Skills: "with Python", "who know X", "skilled in X", "using X"
 _SKILL_PATTERN = re.compile(
-    r"\b(?:with|knows?|skilled\s+in|using|who\s+know|expertise\s+in)\s+([A-Za-z0-9.# +]{2,30}?)(?:\s+(?:in|at|and|from)|[,.]|$)",
+    rf"\b(?:with|knows?|knowing|skilled\s+in|using|who\s+knows?|expertise\s+in|skills?(?:\s+in|\s+are)?)\s+([A-Za-z0-9.# +,]+?(?:\s+(?:and|or)\s+[A-Za-z0-9.# +]+?)?)(?={_BREAKER})",
     re.I
 )
 
@@ -101,12 +127,25 @@ _RESET_KEYWORDS = {
     "something different", "ignore that", "never mind",
 }
 
-# Short follow-up signals (no main entity)
+# Short follow-up signals
 _FOLLOW_UP_PREFIXES = re.compile(
     r"^(?:also|and|but|now|then|additionally|what about|how about|"
     r"filter|narrow|show|only|just|from|in|at|with|who|same)\b",
     re.I
 )
+
+# Topic-shift phrases where the user provides a new semantic topic but wants to keep filters
+_TOPIC_SHIFT = re.compile(
+    r"^(?:also(?:\s+try|\s+find)?|what\s+about|how\s+about|show\s+me|find(?:\s+me)?|search(?:\s+for)?|instead(?:\s+try)?|or\s+maybe)\s+(.+)",
+    re.I
+)
+
+def _clean_topic_shift(query: str) -> str:
+    """If query is a topic shift like 'what about managers', strip the prefix so FAISS gets a clean query."""
+    m = _TOPIC_SHIFT.match(query.strip())
+    if m:
+        return m.group(1).strip()
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +195,10 @@ def _is_follow_up(query: str) -> bool:
     if _FILTER_ONLY.match(q):
         return True
 
+    # If it is a clear topic shift (e.g. "what about managers"), it is NOT a pure-filter follow-up
+    if _TOPIC_SHIFT.match(q):
+        return False
+
     # Starts with a follow-up prefix AND is short enough to be a filter addition
     if len(words) <= 5 and _FOLLOW_UP_PREFIXES.match(q):
         return True
@@ -204,28 +247,57 @@ def _extract_slots_from_query(query: str) -> dict:
         if year:
             slots["batch_year"] = year.strip()
 
-    # Company
+    # 1. Skills (Explicit prefixes)
+    for m in _SKILL_PATTERN.finditer(query):
+        skill_raw = m.group(1).strip()
+        parts = re.split(r'\s*(?:\b(?:and|or)\b|,)\s*', skill_raw, flags=re.I)
+        for p in parts:
+            p = p.strip()
+            if p and len(p) > 1 and p not in slots["skills"]:
+                slots["skills"].append(p)
+
+    # 2. Company
     m = _COMPANY_PATTERN.search(query)
     if m:
-        val = m.group(1).strip().title()
-        # Reject short/generic words that are not company names
+        val = m.group(1).strip()
         _COMPANY_REJECT = {"the", "a", "an", "me", "us", "my", "our", "it", "this", "that", "all"}
         if val and len(val) > 1 and val.lower() not in _COMPANY_REJECT:
-            slots["company"] = val
+            slots["company"] = val.title()
 
-    # Location (run after company to avoid double-matches)
-    m = _LOCATION_PATTERN.search(query)
-    if m:
-        val = m.group(1).strip().title()
-        # Don't overwrite company with a location token; reject deny-listed words
-        if val and len(val) > 1 and val != slots["company"] and val.lower() not in _LOCATION_DENY:
-            slots["location"] = val
+    # 3. Location (run after company to avoid double-matches)
+    valid_parts = []
+    
+    # A. Search for "in/from X"
+    for m in _LOCATION_PATTERN.finditer(query):
+        raw_val = m.group(1).strip().title()
+        parts = re.split(r'\s*(?:\b(?:and|or)\b|,)\s*', raw_val, flags=re.I)
+        for p in parts:
+            p = p.strip()
+            p_clean = re.sub(r'^(the|a|an)\s+', '', p.lower()).strip()
+            p_clean = re.sub(r'\s+(department|dept)$', '', p_clean).strip()
+            
+            # If it matches a technical term in the denylist, move it to skills if not already there
+            if p_clean in _LOCATION_DENY:
+                if len(p_clean) > 1 and p_clean not in ["the", "a", "an", "in", "at"]:
+                    # Clean the skill name (strip 'the', 'a' etc)
+                    skill_name = p.title()
+                    skill_name = re.sub(r'^(The|A|An)\s+', '', skill_name).strip()
+                    if skill_name.lower() not in [s.lower() for s in slots["skills"]]:
+                        slots["skills"].append(skill_name)
+                continue
 
-    # Skills
-    for m in _SKILL_PATTERN.finditer(query):
-        skill = m.group(1).strip()
-        if skill and len(skill) > 1:
-            slots["skills"].append(skill)
+            if p and len(p) > 1 and p != slots.get("company"):
+                valid_parts.append(p)
+
+    # B. Search for "naked" locations (whitelist)
+    if not valid_parts:
+        for m in _NAKED_LOCATION.finditer(query):
+            city = m.group(1).strip().title()
+            if city != slots.get("company") and city.lower() not in [s.lower() for s in slots["skills"]]:
+                valid_parts.append(city)
+                
+    if valid_parts:
+        slots["location"] = "|".join(dict.fromkeys(valid_parts))
 
     return slots
 
@@ -253,10 +325,17 @@ def resolve_turn(query: str, history: List[Turn]) -> ConversationalResult:
             continue
         prior_slots = _extract_slots_from_query(turn.content)
         if not _is_follow_up(turn.content):
-            # This was a "fresh" search → becomes the new base query
-            base_query = turn.content
-            # Reset accumulated filters when base query changes
-            inherited = ConversationalResult(resolved_query=base_query)
+            # The query wasn't a pure filter follow-up.
+            # Could be a clean topic shift (keep filters, change base) or a full fresh reset.
+            shifted_topic = _clean_topic_shift(turn.content)
+            if shifted_topic:
+                # It's a topic shift: e.g. "what about managers" -> "managers"
+                base_query = shifted_topic
+                # We optionally let it inherit previous filters, so do NOT reset `inherited` here.
+            else:
+                # Full fresh search: completely wipe filters and establish new base
+                base_query = turn.content
+                inherited = ConversationalResult(resolved_query=base_query)
 
         # Merge slots from this prior turn
         if prior_slots["company"]:
@@ -277,9 +356,13 @@ def resolve_turn(query: str, history: List[Turn]) -> ConversationalResult:
 
     # --- Step 3: Decide resolved_query ---
     if _is_follow_up(query):
-        resolved_query = base_query  # Inherit the base topic
+        resolved_query = base_query  # Pure filter extension -> keep base topic
     else:
-        resolved_query = query
+        shifted_topic = _clean_topic_shift(query)
+        if shifted_topic:
+            resolved_query = shifted_topic  # Topic shift -> update topic, keep filters
+        else:
+            resolved_query = query          # Fresh search -> new topic
 
     # --- Step 4: Merge (current overrides inherited) ---
     company    = current_slots["company"]    or inherited.company_filter

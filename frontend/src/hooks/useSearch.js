@@ -74,6 +74,15 @@ export function useSearch() {
     setSearchQuery('');
   }, []);
 
+  const injectSearchData = useCallback((data) => {
+    setResults(data.results || []);
+    setTotalPages(data.total_pages || 1);
+    setTotalCount(data.total_count || 0);
+    setLatencyMs(data.latency_ms || 0);
+    setIntent(data.intent || 'SEMANTIC');
+    if (data.page) setCurrentPage(data.page);
+  }, []);
+
   return {
     query,
     setQuery,
@@ -89,5 +98,6 @@ export function useSearch() {
     searchQuery,
     performSearch,
     clearResults,
+    injectSearchData,
   };
 }

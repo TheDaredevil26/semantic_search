@@ -10,6 +10,7 @@ import HowItWorks from '../components/home/HowItWorks';
 export default function HomePage() {
   const navigate = useNavigate();
   const { stats, loading } = useStats();
+  const [query, setQuery] = useState('');
 
   function handleSearch(query) {
     if (!query) return;
@@ -42,8 +43,8 @@ export default function HomePage() {
 
           <div className="max-w-2xl mx-auto mt-8 relative z-10">
             <SearchBar
-              value=""
-              onChange={() => { }}
+              value={query}
+              onChange={setQuery}
               onSearch={handleSearch}
               placeholder="e.g., 'Software engineers in London who shifted to PM'"
               showQuickQueries={true}

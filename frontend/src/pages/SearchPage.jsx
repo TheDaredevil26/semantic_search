@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import SearchBar from '../components/search/SearchBar';
 import FilterSidebar from '../components/search/FilterSidebar';
@@ -41,9 +41,11 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
     searchQuery,
     performSearch,
     clearResults,
+    injectSearchData,
   } = useSearch();
 
   const [isListView, setIsListView] = useState(false);
+  const skipAutoSearchRef = useRef(false);
 
   // Sync URL query to local state
   useEffect(() => {
@@ -55,6 +57,10 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
   // Trigger search when query or filters change
   useEffect(() => {
     if (initialQuery) {
+      if (skipAutoSearchRef.current) {
+        skipAutoSearchRef.current = false;
+        return;
+      }
       performSearch({
         query: initialQuery,
         page: 1,
@@ -112,12 +118,17 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
     });
 
     const resolvedQuery = data.resolved_query || initialQuery;
+    
+    // Changing the URL will trigger the useEffect, but we already have the
+    // perfect conversational results. Flag the ref to skip the redundant fetch.
+    if (resolvedQuery !== initialQuery) {
+      skipAutoSearchRef.current = true;
+    }
     navigate(`/search?q=${encodeURIComponent(resolvedQuery)}`, { replace: true });
 
-    // Inject the results the conversational endpoint already returned directly.
-    // No redundant second network call needed.
-    if (data.results) {
-      setResults(data.results);
+    // Inject the total state
+    if (data) {
+      injectSearchData(data);
     }
   }
 

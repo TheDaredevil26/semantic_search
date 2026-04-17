@@ -20,7 +20,7 @@ check("show me 2015 = follow-up", _is_follow_up("show me 2015"))
 h = [Turn("user", "Find ML engineers"), Turn("assistant", "Found 20")]
 h += [Turn("user", "show me 2018"), Turn("assistant", "Batch 2018")]
 r = resolve_turn("show me 2015", h)
-check("base_query inherited", r.resolved_query == "Find ML engineers", r.resolved_query)
+check("base_query inherited", r.resolved_query == "ML engineers", r.resolved_query)
 check("batch_year OVERRIDDEN to 2015", r.batch_year_filter == "2015", r.batch_year_filter)
 
 # Bug 2: 'only 2019' is a follow-up
@@ -57,7 +57,7 @@ print("\nBug 6: fresh searches clear accumulated filters")
 h3 = [Turn("user", "Find ML engineers"), Turn("assistant", "Found 30"),
       Turn("user", "in Bangalore"), Turn("assistant", "Location: Bangalore")]
 r3 = resolve_turn("Find data scientists in Mumbai", h3)
-check("new base query", r3.resolved_query == "Find data scientists in Mumbai", r3.resolved_query)
+check("new base query", r3.resolved_query == "data scientists in Mumbai", r3.resolved_query)
 check("OLD location cleared", r3.location_filter == "Mumbai", r3.location_filter)
 
 # Bug 7: filter-only query that looks misleadingly like a topic

@@ -32,9 +32,15 @@ export default function ConversationalPanel({ initialQuery, onSearchResponse, on
     setIsLoading(true);
 
     try {
+      // Seed backend context with the active semantic query if this is the first conversational turn
+      const payloadHistory = [...history];
+      if (payloadHistory.length === 0 && initialQuery) {
+        payloadHistory.push({ role: 'user', content: initialQuery });
+      }
+
       const data = await conversationalSearch({
         query: q,
-        conversation_history: history, // send history *before* this query (no current turn)
+        conversation_history: payloadHistory, // send history *before* this query
         page: 1,
         limit: 20,
       });

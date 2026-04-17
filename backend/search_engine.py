@@ -108,9 +108,10 @@ def _apply_structured_filters(
             company_filter.lower(), na=False
         )
     if location_filter:
-        mask &= df_subset["city"].str.lower().str.contains(
-            location_filter.lower(), na=False
-        )
+        locs = [l.strip().lower() for l in re.split(r'[,|]', location_filter) if l.strip()]
+        if locs:
+            regex_pat = "|".join(locs)
+            mask &= df_subset["city"].str.lower().str.contains(regex_pat, na=False)
     batch_range = _parse_batch_filter(batch_year_filter)
     if batch_range:
         lo, hi = batch_range

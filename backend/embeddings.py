@@ -209,7 +209,17 @@ class EmbeddingsManager:
             idx = int(indices[0][i])
             if idx < 0 or idx >= len(self.id_map):
                 continue
-            results.append((self.id_map[idx], float(scores[0][i])))
+            # Convert FAISS L2 squared distance to Cosine Similarity
+            # L2^2 = 2 - 2*cos_sim  =>  cos_sim = 1 - (L2^2 / 2)
+            l2_sq = float(scores[0][i])
+            cosine_sim = 1.0 - (l2_sq / 2.0)
+            
+            # Floor to 0.0 to avoid negative score visual bugs in UI
+            cosine_sim = max(0.0, cosine_sim)
+            results.append((self.id_map[idx], cosine_sim))
+        
+        # Sort descending by cosine similarity (highest is best)
+        results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     def search_by_vector(self, vector: np.ndarray, top_k: int = None) -> list:
@@ -235,7 +245,13 @@ class EmbeddingsManager:
             idx = int(indices[0][i])
             if idx < 0 or idx >= len(self.id_map):
                 continue
-            results.append((self.id_map[idx], float(scores[0][i])))
+            # Convert FAISS L2 squared distance to Cosine Similarity
+            l2_sq = float(scores[0][i])
+            cosine_sim = 1.0 - (l2_sq / 2.0)
+            cosine_sim = max(0.0, cosine_sim)
+            results.append((self.id_map[idx], cosine_sim))
+        
+        results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     def get_embedding_by_id(self, alumnus_id: str) -> np.ndarray:
