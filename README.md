@@ -31,7 +31,7 @@ The application utilizes a powerful Python FastAPI backend driving advanced ML a
 
 ```
 ┌────────────────────────────────────────────────────┐
-│                  React + Vite SPA                   │
+│                  React + Vite SPA                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
 │  │ Search UI│  │ Network  │  │ Dashboard        │  │
 │  │ + Chat   │  │ Graph    │  │ + Comparison     │  │
@@ -39,17 +39,17 @@ The application utilizes a powerful Python FastAPI backend driving advanced ML a
 └──────────────────────┬─────────────────────────────┘
                        │ REST API (JSON Proxy :8000)
 ┌──────────────────────┴─────────────────────────────┐
-│                  FastAPI Backend                    │
+│                  FastAPI Backend                   │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
 │  │ SBERT    │  │ FAISS    │  │ NetworkX Graph   │  │
 │  │ Embedder │  │ Index    │  │ + PageRank       │  │
 │  └──────────┘  └──────────┘  └──────────────────┘  │
-│                                                     │
+│                                                    │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
 │  │ Entity   │  │ Hybrid   │  │ Path Finder      │  │
 │  │ Extractor│  │ Reranker │  │ Engine           │  │
 │  └──────────┘  └──────────┘  └──────────────────┘  │
-└─────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────┘
 ```
 
 ### Hybrid Scoring Formula
