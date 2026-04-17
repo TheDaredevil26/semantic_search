@@ -20,6 +20,7 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
     activeFilters,
     hasActiveFilters,
     updateFilter,
+    setAllFilters,
     clearFilters,
     removeFilter,
     getFilterPayload
@@ -29,6 +30,7 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
     query,
     setQuery,
     results,
+    setResults,
     loading,
     error,
     currentPage,
@@ -37,7 +39,8 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
     latencyMs,
     intent,
     searchQuery,
-    performSearch
+    performSearch,
+    clearResults,
   } = useSearch();
 
   const [isListView, setIsListView] = useState(false);
@@ -95,23 +98,27 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
   }
 
   function handleConversationalResponse(data) {
-    // When the conversational panel resolves a query/filters
+    // Atomically replace all active filter state from the resolved backend response
+    // so old filters don't bleed into the new conversational context.
     const resolvedFilters = data.applied_filters || {};
-    if (resolvedFilters.company) updateFilter('company', resolvedFilters.company);
-    if (resolvedFilters.location) updateFilter('location', resolvedFilters.location);
-    if (resolvedFilters.batch_year) updateFilter('batchYear', resolvedFilters.batch_year);
-    if (resolvedFilters.skills?.length) updateFilter('skills', resolvedFilters.skills);
+    setAllFilters({
+      batchFilter: [],
+      deptFilter: [],
+      company: resolvedFilters.company || '',
+      location: resolvedFilters.location || '',
+      batchYear: resolvedFilters.batch_year || '',
+      skills: resolvedFilters.skills || [],
+      graphWeight: activeFilters.graphWeight,
+    });
 
-    navigate(`/search?q=${encodeURIComponent(data.resolved_query || initialQuery)}`, { replace: true });
+    const resolvedQuery = data.resolved_query || initialQuery;
+    navigate(`/search?q=${encodeURIComponent(resolvedQuery)}`, { replace: true });
 
-    // Assuming the hook performSearch handles updating results,
-    // but the conversational search returns the payload directly.
-    // We would need to expose a setter on useSearch to inject results manually,
-    // OR just let the conversational panel handle the UI, OR trigger a clean search.
-    // For simplicity, trigger a clean search with the new filters:
-    setTimeout(() => {
-      handleApplyFilters();
-    }, 100);
+    // Inject the results the conversational endpoint already returned directly.
+    // No redundant second network call needed.
+    if (data.results) {
+      setResults(data.results);
+    }
   }
 
   return (
@@ -151,6 +158,7 @@ export default function SearchPage({ onOpenProfile, onViewGraph, onFindSimilar, 
           <ConversationalPanel
             initialQuery={initialQuery}
             onSearchResponse={handleConversationalResponse}
+            onReset={() => { clearFilters(); clearResults(); }}
           />
 
           {hasActiveFilters && (

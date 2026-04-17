@@ -50,6 +50,11 @@ export function useFilters() {
     setActiveFilters(prev => ({ ...prev, [key]: value }));
   }
 
+  // Replace ALL filters at once (used by conversational panel to avoid stale state race)
+  function setAllFilters(filters) {
+    setActiveFilters(prev => ({ ...prev, ...filters }));
+  }
+
   function clearFilters() {
     setActiveFilters({
       batchFilter: [],
@@ -104,6 +109,7 @@ export function useFilters() {
     loading,
     hasActiveFilters,
     updateFilter,
+    setAllFilters,
     clearFilters,
     removeFilter,
     getFilterPayload,

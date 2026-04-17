@@ -5,11 +5,12 @@ import { useToast } from '../shared/Toast';
 /**
  * ConversationalPanel — Collapsible UI for multi-turn conversational search.
  */
-export default function ConversationalPanel({ initialQuery, onSearchResponse }) {
+export default function ConversationalPanel({ initialQuery, onSearchResponse, onReset }) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [resultCount, setResultCount] = useState(null);
   const historyEndRef = useRef(null);
   const { addToast } = useToast();
 
@@ -24,14 +25,16 @@ export default function ConversationalPanel({ initialQuery, onSearchResponse }) 
     if (!q) return;
 
     const newTurn = { role: 'user', content: q };
-    setHistory(prev => [...prev, newTurn]);
+    // Append user turn BEFORE sending so the send button is disabled properly
+    const nextHistory = [...history, newTurn];
+    setHistory(nextHistory);
     setInput('');
     setIsLoading(true);
 
     try {
       const data = await conversationalSearch({
         query: q,
-        conversation_history: history, // send history *before* this query
+        conversation_history: history, // send history *before* this query (no current turn)
         page: 1,
         limit: 20,
       });
@@ -39,11 +42,14 @@ export default function ConversationalPanel({ initialQuery, onSearchResponse }) 
       const filters = data.applied_filters || {};
       const filterParts = Object.entries(filters)
         .filter(([, v]) => v && (!Array.isArray(v) || v.length > 0))
-        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+        .map(([k, v]) => `${k.replace('_', ' ')}: ${Array.isArray(v) ? v.join(', ') : v}`);
+
+      const count = data.total_count ?? data.total ?? 0;
+      setResultCount(count);
 
       const assistantMsg = filterParts.length > 0
-        ? `Found ${data.total_count} results. Active filters: ${filterParts.join(' | ')}`
-        : `Found ${data.total_count} results for "${data.resolved_query || q}"`;
+        ? `Found ${count} results. Filters: ${filterParts.join(' | ')}`
+        : `Found ${count} results for "${data.resolved_query || q}"`;
 
       setHistory(prev => [...prev, { role: 'assistant', content: assistantMsg }]);
 
@@ -63,8 +69,11 @@ export default function ConversationalPanel({ initialQuery, onSearchResponse }) 
 
   function handleReset() {
     setHistory([]);
+    setResultCount(null);
+    onReset?.();  // Clear results and filters in parent
     addToast('Conversation reset', 'info');
   }
+
 
   return (
     <div className="mb-6 bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">

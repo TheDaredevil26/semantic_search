@@ -39,16 +39,49 @@ class ConversationalResult:
 # Regex patterns (order matters — more specific first)
 # ---------------------------------------------------------------------------
 
-# Batch year: must be 4-digit number with clear context
-_BATCH_PATTERN = re.compile(
-    r"\b(?:batch\s+(\d{4})|(\d{4})\s+batch|graduated?\s+(?:in\s+)?(\d{4}))\b", re.I
+# Batch year: single year OR range variants
+# Captures: "batch 2015", "2015 batch", "graduated 2019",
+#           "from 2015 to 2020", "2015-2020", "between 2015 and 2020",
+#           "after 2015", "before 2020", "since 2018",
+#           "show me 2018", "only 2019", "change to 2020"
+_BATCH_SINGLE = re.compile(
+    r"\b(?:"
+    r"batch\s+(\d{4})"
+    r"|(\d{4})\s+batch"
+    r"|graduated?\s+(?:in\s+)?(\d{4})"
+    # Filter-command + bare year: 'show me 2018', 'only 2019', 'change to 2020', 'update to 2021'
+    r"|(?:show(?:\s+me)?|only|just|change\s+to|update\s+to|make\s+it|now\s+only)\s+(\d{4})"
+    r")",
+    re.I,
+)
+_BATCH_RANGE = re.compile(
+    r"\b(?:"
+    r"(?:batch(?:es)?\s+)?(?:from\s+)?(\d{4})\s*(?:to|-|through|thru)\s*(\d{4})"  # "from 2015 to 2020", "2015-2020"
+    r"|between\s+(\d{4})\s+and\s+(\d{4})"                                           # "between 2015 and 2020"
+    r")",
+    re.I,
+)
+_BATCH_OPEN = re.compile(
+    r"\b(?:"
+    r"(?:after|since|from)\s+(\d{4})"   # captured in group 1
+    r"|(?:before|until|up\s+to)\s+(\d{4})"  # captured in group 2
+    r"|(?:from\s+)?(\d{4})\s*onwards?"  # captured in group 3
+    r")",
+    re.I,
 )
 
 # Location: "in X" / "based in X" / "located in X"
+# Excludes batch/from/to/and/onwards to prevent ambiguous matches with year ranges
 _LOCATION_PATTERN = re.compile(
-    r"\b(?:in|based in|located in|from|living in|at)\s+([A-Z][A-Za-z\s]{1,30}?)(?:\s+(?:batch|company|department|from|\d{4})|[,.]|$)",
+    r"\b(?:in|based in|located in|living in)\s+([A-Z][A-Za-z\s]{1,30}?)(?:\s+(?:batch|company|department|from|to|and|\d{4}|onwards?)|[,.]|$)",
     re.I
 )
+
+# Words that must never be treated as location names
+_LOCATION_DENY = {
+    "batch", "batches", "that", "the", "a", "an", "my", "our", "onwards",
+    "this", "all", "india", "us", "uk", "usa",  # keep very small; real cities are fine
+}
 
 # Company: "at X" / "working at X" / "filter to X" / "only X" / "at company X"
 _COMPANY_PATTERN = re.compile(
@@ -106,9 +139,17 @@ def _is_follow_up(query: str) -> bool:
     _FILTER_ONLY = re.compile(
         r"^(?:"
         r"(?:working\s+at|at\s+company|filter\s+(?:to|by)|only\s+from|only\s+at)\s+\S"
-        r"|(?:from|in)\s+\d{4}"       # "from 2019", "in 2020"
-        r"|batch\s+\d{4}"             # "batch 2019"
-        r"|\d{4}\s+batch"             # "2019 batch"
+        r"|(?:from|in)\s+\d{4}"                            # "from 2019", "in 2020"
+        r"|batch\s+\d{4}"                                  # "batch 2019"
+        r"|\d{4}\s+batch"                                  # "2019 batch"
+        r"|\d{4}\s*(?:to|-|through)\s*\d{4}"              # "2015 to 2020"
+        r"|batch(?:es)?\s+from\s+\d{4}"                   # "batches from 2015 to 2020"
+        r"|between\s+\d{4}"                                # "between 2015 and 2020"
+        r"|after\s+\d{4}|before\s+\d{4}|since\s+\d{4}"   # open ranges
+        # Slot-only overrides: "show me 2018", "only 2019", "change to 2020" etc.
+        r"|(?:show(?:\s+me)?|only|just|make\s+it|change\s+to|update\s+to|now\s+only)\s+\d{4}"
+        r"|(?:show(?:\s+me)?|only|just)\s+(?:from\s+)?\d{4}(?:\s+(?:to|through|-)\s+\d{4})?"
+        r"|only\s+(?:batch\s+)?\d{4}"
         r")",
         re.I,
     )
@@ -126,13 +167,40 @@ def _extract_slots_from_query(query: str) -> dict:
     """
     Extract structured slots from a single query string.
     Returns dict with keys: company, location, batch_year, skills.
+
+    batch_year is returned as a string understood by _parse_batch_filter:
+      "2019"       — single year
+      "2015-2020"  — inclusive range
     """
     slots = {"company": None, "location": None, "batch_year": None, "skills": []}
 
-    # Batch year (most unambiguous — match first)
-    m = _BATCH_PATTERN.search(query)
-    if m:
-        year = next((g for g in m.groups() if g), None)
+    # Batch year — check range first, then open-ended, then single
+    m_range = _BATCH_RANGE.search(query)
+    m_open  = _BATCH_OPEN.search(query)
+    m_single = _BATCH_SINGLE.search(query)
+
+    if m_range:
+        # Closed range: either "X to Y" (groups 1,2) or "between X and Y" (groups 3,4)
+        g = m_range.groups()
+        lo = g[0] or g[2]
+        hi = g[1] or g[3]
+        if lo and hi:
+            lo_i, hi_i = int(lo), int(hi)
+            slots["batch_year"] = f"{min(lo_i,hi_i)}-{max(lo_i,hi_i)}"
+    elif m_open:
+        g = m_open.groups()
+        after_year  = g[0]  # "after/since/from X"
+        before_year = g[1]  # "before/until X"
+        onwards_year = g[2] # "X onwards"
+        current_year = 2025
+        if after_year:
+            slots["batch_year"] = f"{after_year}-{current_year}"
+        elif before_year:
+            slots["batch_year"] = f"2000-{before_year}"
+        elif onwards_year:
+            slots["batch_year"] = f"{onwards_year}-{current_year}"
+    elif m_single:
+        year = next((g for g in m_single.groups() if g), None)
         if year:
             slots["batch_year"] = year.strip()
 
@@ -140,16 +208,17 @@ def _extract_slots_from_query(query: str) -> dict:
     m = _COMPANY_PATTERN.search(query)
     if m:
         val = m.group(1).strip().title()
-        # Reject if it looks like a location or is too generic
-        if val and len(val) > 1 and not val.lower() in ("the", "a", "an"):
+        # Reject short/generic words that are not company names
+        _COMPANY_REJECT = {"the", "a", "an", "me", "us", "my", "our", "it", "this", "that", "all"}
+        if val and len(val) > 1 and val.lower() not in _COMPANY_REJECT:
             slots["company"] = val
 
     # Location (run after company to avoid double-matches)
     m = _LOCATION_PATTERN.search(query)
     if m:
         val = m.group(1).strip().title()
-        # Don't overwrite company with a location token
-        if val and len(val) > 1 and val != slots["company"]:
+        # Don't overwrite company with a location token; reject deny-listed words
+        if val and len(val) > 1 and val != slots["company"] and val.lower() not in _LOCATION_DENY:
             slots["location"] = val
 
     # Skills
