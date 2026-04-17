@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {"id": "readme_arch", "label": "System Architecture", "file_type": "document", "source_file": "README.md"},
+    {"id": "readme_scoring", "label": "Hybrid Scoring Formula", "file_type": "document", "source_file": "README.md"},
+    {"id": "readme_features", "label": "Key Features", "file_type": "document", "source_file": "README.md"},
+    {"id": "impl_conversational", "label": "Conversational Stub", "file_type": "document", "source_file": "docs/implementation_plan_final (1).md"},
+    {"id": "impl_hnsw", "label": "FAISS HNSW Upgrade", "file_type": "document", "source_file": "docs/implementation_plan_final (1).md"},
+    {"id": "impl_node2vec", "label": "Node2Vec Integration", "file_type": "document", "source_file": "docs/implementation_plan_final (1).md"},
+    {"id": "impl_sqlite", "label": "SQLite FTS5 Migration", "file_type": "document", "source_file": "docs/implementation_plan_final (1).md"},
+    {"id": "impl_intent", "label": "Query Intent Classifier", "file_type": "document", "source_file": "docs/implementation_plan_final (1).md"},
+    {"id": "improve_apostrophe", "label": "Apostrophe Escape Fix", "file_type": "document", "source_file": "docs/alumni_search_improvements.md"},
+    {"id": "improve_db_fields", "label": "Phone & Email Extension", "file_type": "document", "source_file": "docs/alumni_search_improvements.md"},
+    {"id": "asset_hero", "label": "Hero Image", "file_type": "image", "source_file": "frontend/src/assets/hero.png"},
+    {"id": "asset_react", "label": "React Logo", "file_type": "image", "source_file": "frontend/src/assets/react.svg"},
+    {"id": "asset_vite", "label": "Vite Logo", "file_type": "image", "source_file": "frontend/src/assets/vite.svg"}
+  ],
+  "edges": [
+    {"source": "readme_scoring", "target": "search_engine_hybrid_scoring", "relation": "rationale_for", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "README.md"},
+    {"source": "impl_conversational", "target": "backend_conversational", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/implementation_plan_final (1).md"},
+    {"source": "impl_hnsw", "target": "backend_embeddings", "relation": "upgrades", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/implementation_plan_final (1).md"},
+    {"source": "impl_node2vec", "target": "backend_graph_builder", "relation": "complements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/implementation_plan_final (1).md"},
+    {"source": "improve_apostrophe", "target": "frontend_app_js", "relation": "fixes", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/alumni_search_improvements.md"},
+    {"source": "improve_db_fields", "target": "backend_models", "relation": "modifies", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/alumni_search_improvements.md"},
+    {"source": "asset_react", "target": "frontend_main", "relation": "referenced_by", "confidence": "INFERRED", "confidence_score": 0.8, "source_file": "frontend/src/main.jsx"}
+  ],
+  "hyperedges": [],
+  "input_tokens": 1500,
+  "output_tokens": 500
+}

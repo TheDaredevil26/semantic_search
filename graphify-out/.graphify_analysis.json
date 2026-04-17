@@ -1,0 +1,763 @@
+{
+  "communities": {
+    "0": [
+      "app_addconvbubble",
+      "app_addtohistory",
+      "app_animatecounters",
+      "app_apicall",
+      "app_applystructuredfilters",
+      "app_applytheme",
+      "app_changepage",
+      "app_clearstructuredfilters",
+      "app_closebookmarkspanel",
+      "app_closegraph",
+      "app_closeprofilemodal",
+      "app_createresultcard",
+      "app_createscrolltopbutton",
+      "app_escapehtml",
+      "app_exportcsv",
+      "app_fetchautocomplete",
+      "app_findsimilar",
+      "app_hideautocomplete",
+      "app_isbookmarked",
+      "app_loadfilters",
+      "app_loadstats",
+      "app_navigateautocomplete",
+      "app_openbookmarkspanel",
+      "app_openconnectmodal",
+      "app_opengraph",
+      "app_openprofile",
+      "app_performsearch",
+      "app_pollmetrics",
+      "app_populatefilterdatalist",
+      "app_removeactivechip",
+      "app_removebookmarkfrompanel",
+      "app_removefilteroption",
+      "app_renderactivefilterchips",
+      "app_renderautocomplete",
+      "app_renderbookmarkslist",
+      "app_renderdashboardcharts",
+      "app_renderfilterchips",
+      "app_rendergraphvisualization",
+      "app_renderpagination",
+      "app_renderpathresult",
+      "app_renderprofilemodal",
+      "app_renderresults",
+      "app_rendersearchhistory",
+      "app_replaysearch",
+      "app_resetconversation",
+      "app_selectautocomplete",
+      "app_selectpathalumni",
+      "app_sendconversationalquery",
+      "app_setsearchloading",
+      "app_setupeventlisteners",
+      "app_setuppathinput",
+      "app_showerror",
+      "app_showloadingskeletons",
+      "app_showtoast",
+      "app_togglebookmark",
+      "app_togglebookmarkspanel",
+      "app_toggleconversational",
+      "app_toggleexplain",
+      "app_togglehowitworks",
+      "app_toggleresultsview",
+      "app_togglestructuredfilters",
+      "app_updatebookmarkbadge",
+      "app_viewgraph",
+      "app_viewpathgraph",
+      "frontend_legacy_app_js",
+      "frontend_src_components_search_resultcard_jsx",
+      "resultcard_resultcard"
+    ],
+    "1": [
+      "backend_cache_manager_py",
+      "backend_data_loader_py",
+      "backend_logger_py",
+      "backend_main_py",
+      "cache_manager_cacheentry",
+      "cache_manager_cacheentry_init",
+      "cache_manager_lrucache_set",
+      "cache_manager_make_embedding_key",
+      "cache_manager_make_graph_score_key",
+      "cache_manager_make_search_key",
+      "cache_manager_rationale_1",
+      "cache_manager_rationale_73",
+      "cache_manager_stats",
+      "data_loader_generate_profile_text",
+      "data_loader_get_unique_values",
+      "data_loader_load_alumni_data",
+      "data_loader_rationale_1",
+      "data_loader_rationale_107",
+      "data_loader_rationale_13",
+      "data_loader_rationale_93",
+      "entity_extractor_entityextractor_load_entities",
+      "entity_extractor_rationale_25",
+      "graph_builder_alumnigraph_build_node2vec",
+      "graph_builder_alumnigraph_get_all_entity_names",
+      "graph_builder_alumnigraph_get_neighborhood",
+      "graph_builder_alumnigraph_init",
+      "graph_builder_rationale_359",
+      "graph_builder_rationale_448",
+      "graph_builder_rationale_628",
+      "logger_emit",
+      "logger_get_metrics",
+      "logger_log_request",
+      "logger_rationale_1",
+      "logger_rationale_115",
+      "logger_rationale_121",
+      "logger_rationale_127",
+      "logger_rationale_40",
+      "logger_rationale_63",
+      "logger_set_embeddings_ready",
+      "logger_set_node2vec_ready",
+      "main_alumni_list",
+      "main_autocomplete",
+      "main_cache_stats",
+      "main_conversational_search",
+      "main_export_results",
+      "main_favicon",
+      "main_find_path",
+      "main_get_alumni_graph",
+      "main_get_filters",
+      "main_get_metrics",
+      "main_get_search_filters",
+      "main_get_stats",
+      "main_lifespan",
+      "main_search",
+      "main_serve_frontend",
+      "main_startup_logic",
+      "reproduce_extraction_bugs_test_extraction",
+      "reproduce_extraction_bugs_turn",
+      "scratch_reproduce_extraction_bugs_py",
+      "trie_autocompletetrie_build_from_data",
+      "trie_rationale_52"
+    ],
+    "2": [
+      "basemodel",
+      "cache_manager_lrucache",
+      "cache_manager_lrucache_init",
+      "cache_manager_rationale_29",
+      "conversational_conversationalsearchengine",
+      "conversational_conversationalsearchengine_init",
+      "conversational_rationale_395",
+      "conversational_turn",
+      "embeddings_crossencoderreranker",
+      "embeddings_crossencoderreranker_init",
+      "embeddings_embeddingsmanager",
+      "embeddings_embeddingsmanager_init",
+      "embeddings_rationale_295",
+      "embeddings_rationale_72",
+      "entity_extractor_entityextractor",
+      "entity_extractor_entityextractor_init",
+      "entity_extractor_rationale_9",
+      "graph_builder_alumnigraph",
+      "graph_builder_rationale_23",
+      "main_rationale_1",
+      "main_rationale_185",
+      "main_rationale_202",
+      "main_rationale_261",
+      "main_rationale_313",
+      "main_rationale_338",
+      "main_rationale_363",
+      "main_rationale_374",
+      "main_rationale_386",
+      "main_rationale_410",
+      "main_rationale_427",
+      "main_rationale_468",
+      "main_rationale_480",
+      "main_rationale_486",
+      "main_rationale_507",
+      "main_rationale_550",
+      "main_rationale_577",
+      "main_rationale_65",
+      "models_conversationalsearchrequest",
+      "models_filteroptions",
+      "models_graphdata",
+      "models_rationale_138",
+      "models_rationale_14",
+      "models_rationale_149",
+      "models_rationale_165",
+      "models_rationale_43",
+      "models_rationale_98",
+      "models_searchrequest",
+      "models_searchresponse",
+      "models_statsresponse",
+      "search_engine_hybridsearchengine",
+      "search_engine_rationale_1",
+      "search_engine_rationale_141",
+      "search_engine_rationale_209",
+      "search_engine_rationale_395",
+      "search_engine_rationale_47",
+      "search_engine_rationale_497",
+      "search_engine_rationale_67",
+      "search_engine_rationale_99",
+      "trie_autocompletetrie",
+      "trie_rationale_20"
+    ],
+    "3": [
+      "backend_search_engine_py",
+      "cache_manager_lrucache_get",
+      "cache_manager_rationale_55",
+      "embeddings_crossencoderreranker_rerank",
+      "embeddings_embeddingsmanager_get_embedding_by_id",
+      "embeddings_rationale_258",
+      "embeddings_rationale_316",
+      "entity_extractor_entityextractor_extract",
+      "entity_extractor_entityextractor_generate_explanation",
+      "entity_extractor_rationale_140",
+      "entity_extractor_rationale_37",
+      "frontend_src_hooks_usefilters_js",
+      "frontend_src_hooks_usesearch_js",
+      "frontend_src_pages_searchpage_jsx",
+      "graph_builder_alumnigraph_add_weighted_alumni_edges",
+      "graph_builder_alumnigraph_build_from_dataframe",
+      "graph_builder_alumnigraph_compute_centrality",
+      "graph_builder_alumnigraph_compute_graph_score",
+      "graph_builder_alumnigraph_compute_personalized_pagerank",
+      "graph_builder_alumnigraph_find_path",
+      "graph_builder_alumnigraph_get_alumni_by_name",
+      "graph_builder_alumnigraph_get_centrality",
+      "graph_builder_alumnigraph_get_entity_node_ids",
+      "graph_builder_rationale_160",
+      "graph_builder_rationale_206",
+      "graph_builder_rationale_216",
+      "graph_builder_rationale_262",
+      "graph_builder_rationale_270",
+      "graph_builder_rationale_305",
+      "graph_builder_rationale_536",
+      "graph_builder_rationale_54",
+      "graph_builder_rationale_545",
+      "main_find_similar",
+      "main_get_alumni",
+      "search_engine_apply_structured_filters",
+      "search_engine_classify_intent",
+      "search_engine_extract_matched_keywords",
+      "search_engine_hybridsearchengine_init",
+      "search_engine_hybridsearchengine_search",
+      "search_engine_hybridsearchengine_search_similar",
+      "search_engine_parse_batch_filter",
+      "searchpage_searchpage",
+      "usefilters_usefilters",
+      "usesearch_usesearch"
+    ],
+    "4": [
+      "backend_conversational_py",
+      "backend_trie_py",
+      "conversational_clean_topic_shift",
+      "conversational_conversationalresult",
+      "conversational_conversationalsearchengine_handle_turn",
+      "conversational_conversationalsearchengine_resolve_local",
+      "conversational_conversationalsearchengine_resolve_openai",
+      "conversational_extract_slots_from_query",
+      "conversational_is_follow_up",
+      "conversational_is_reset",
+      "conversational_rationale_1",
+      "conversational_rationale_144",
+      "conversational_rationale_161",
+      "conversational_rationale_210",
+      "conversational_rationale_29",
+      "conversational_rationale_306",
+      "conversational_rationale_409",
+      "conversational_resolve_turn",
+      "filter_audit_check",
+      "filter_audit_search",
+      "tests_filter_audit_py",
+      "trie_autocompletetrie_init",
+      "trie_autocompletetrie_insert",
+      "trie_rationale_1",
+      "trie_rationale_37",
+      "trie_trienode"
+    ],
+    "5": [
+      "backend_embeddings_py",
+      "backend_graph_builder_py",
+      "embeddings_check_and_invalidate_faiss_cache",
+      "embeddings_crossencoderreranker_load_model",
+      "embeddings_embeddingsmanager_build_index",
+      "embeddings_embeddingsmanager_load_from_cache",
+      "embeddings_embeddingsmanager_save",
+      "embeddings_embeddingsmanager_search",
+      "embeddings_embeddingsmanager_search_by_ids",
+      "embeddings_embeddingsmanager_search_by_vector",
+      "embeddings_faiss_config_hash",
+      "embeddings_rationale_1",
+      "embeddings_rationale_100",
+      "embeddings_rationale_145",
+      "embeddings_rationale_155",
+      "embeddings_rationale_190",
+      "embeddings_rationale_226",
+      "embeddings_rationale_265",
+      "embeddings_rationale_309",
+      "embeddings_rationale_32",
+      "embeddings_rationale_38",
+      "embeddings_rationale_62",
+      "embeddings_write_faiss_version",
+      "graph_builder_alumnigraph_save",
+      "graph_builder_load",
+      "graph_builder_rationale_1"
+    ],
+    "6": [
+      "client_apicall",
+      "client_conversationalsearch",
+      "client_findpath",
+      "client_getalumnigraph",
+      "client_getalumnilist",
+      "client_getalumniprofile",
+      "client_getautocomplete",
+      "client_getexporturl",
+      "client_getmetrics",
+      "client_getsearchfilters",
+      "client_getsimilaralumni",
+      "client_getstats",
+      "client_searchalumni",
+      "frontend_src_api_client_js",
+      "frontend_src_components_shared_scorebreakdown_jsx",
+      "scorebreakdown_scorebreakdown"
+    ],
+    "7": [
+      "app_app",
+      "app_appcontent",
+      "conversationalpanel_conversationalpanel",
+      "frontend_src_app_jsx",
+      "frontend_src_components_search_conversationalpanel_jsx",
+      "frontend_src_components_shared_toast_jsx",
+      "frontend_src_hooks_usestats_js",
+      "frontend_src_pages_homepage_jsx",
+      "frontend_src_pages_networkpage_jsx",
+      "homepage_dashboardlist",
+      "homepage_homepage",
+      "homepage_statcard",
+      "networkpage_networkpage",
+      "toast_toastprovider",
+      "toast_usetoast",
+      "usestats_usestats"
+    ],
+    "8": [
+      "backend_models_py",
+      "models_alumniprofile",
+      "models_config",
+      "models_conversationturn",
+      "models_explaininfo",
+      "models_graphedge",
+      "models_graphnode",
+      "models_rationale_1",
+      "models_rationale_115",
+      "models_rationale_125",
+      "models_rationale_37",
+      "models_rationale_55",
+      "models_rationale_71",
+      "models_rationale_85",
+      "models_searchresultitem"
+    ],
+    "9": [
+      "data_generate_alumni_py",
+      "generate_alumni_generate_alumni",
+      "generate_alumni_generate_bio",
+      "generate_alumni_generate_career_path",
+      "generate_alumni_generate_email",
+      "generate_alumni_generate_phone",
+      "generate_alumni_rationale_1",
+      "generate_alumni_rationale_269",
+      "generate_alumni_rationale_276",
+      "generate_alumni_rationale_290",
+      "generate_alumni_rationale_310",
+      "generate_alumni_rationale_382",
+      "generate_alumni_rationale_496",
+      "generate_alumni_write_csv"
+    ],
+    "10": [
+      "bookmarkspanel_bookmarkspanel",
+      "bookmarkspanel_getbookmarks",
+      "bookmarkspanel_isbookmarked",
+      "bookmarkspanel_togglebookmark",
+      "frontend_src_components_shared_bookmarkspanel_jsx"
+    ],
+    "11": [
+      "frontend_src_components_search_searchbar_jsx",
+      "frontend_src_hooks_usedebounce_js",
+      "searchbar_searchbar",
+      "usedebounce_usedebounce"
+    ],
+    "12": [
+      "batch_range_test_check",
+      "batch_range_test_conv_turn",
+      "batch_range_test_rationale_1",
+      "tests_batch_range_test_py"
+    ],
+    "13": [
+      "conv_test_check",
+      "conv_test_conv_turn",
+      "conv_test_rationale_1",
+      "tests_conv_test_py"
+    ],
+    "14": [
+      "config_py",
+      "config_rationale_1"
+    ],
+    "15": [
+      "run_py",
+      "run_rationale_1"
+    ],
+    "16": [
+      "cache_manager_lrucache_clear",
+      "cache_manager_rationale_90"
+    ],
+    "17": [
+      "cache_manager_lrucache_invalidate",
+      "cache_manager_rationale_86"
+    ],
+    "18": [
+      "conversational_conversationalsearchengine_reset",
+      "conversational_rationale_430"
+    ],
+    "19": [
+      "embeddings_embeddingsmanager_load_model",
+      "embeddings_rationale_89"
+    ],
+    "20": [
+      "backend_entity_extractor_py",
+      "entity_extractor_rationale_1"
+    ],
+    "21": [
+      "graph_builder_alumnigraph_get_node2vec_similarity",
+      "graph_builder_rationale_425"
+    ],
+    "22": [
+      "trie_autocompletetrie_search",
+      "trie_rationale_102"
+    ],
+    "23": [
+      "frontend_src_components_home_howitworks_jsx",
+      "howitworks_howitworks"
+    ],
+    "24": [
+      "footer_footer",
+      "frontend_src_components_layout_footer_jsx"
+    ],
+    "25": [
+      "frontend_src_components_layout_header_jsx",
+      "header_header"
+    ],
+    "26": [
+      "frontend_src_components_network_graphcanvas_jsx",
+      "graphcanvas_graphcanvas"
+    ],
+    "27": [
+      "frontend_src_components_network_pathfinder_jsx",
+      "pathfinder_pathfinder"
+    ],
+    "28": [
+      "frontend_src_components_network_similarpanel_jsx",
+      "similarpanel_similarpanel"
+    ],
+    "29": [
+      "activefilterchips_activefilterchips",
+      "frontend_src_components_search_activefilterchips_jsx"
+    ],
+    "30": [
+      "filtersidebar_filtersidebar",
+      "frontend_src_components_search_filtersidebar_jsx"
+    ],
+    "31": [
+      "frontend_src_components_search_pagination_jsx",
+      "pagination_pagination"
+    ],
+    "32": [
+      "frontend_src_components_search_resultslist_jsx",
+      "resultslist_resultslist"
+    ],
+    "33": [
+      "commandpalette_commandpalette",
+      "frontend_src_components_shared_commandpalette_jsx"
+    ],
+    "34": [
+      "comparemodal_comparemodal",
+      "frontend_src_components_shared_comparemodal_jsx"
+    ],
+    "35": [
+      "comparetray_comparetray",
+      "frontend_src_components_shared_comparetray_jsx"
+    ],
+    "36": [
+      "connectmodal_connectmodal",
+      "frontend_src_components_shared_connectmodal_jsx"
+    ],
+    "37": [
+      "frontend_src_components_shared_profilemodal_jsx",
+      "profilemodal_profilemodal"
+    ],
+    "38": [
+      "conv_unit_test_check",
+      "tests_conv_unit_test_py"
+    ],
+    "39": [
+      "multiturn_bug_test_check",
+      "tests_multiturn_bug_test_py"
+    ],
+    "40": [
+      "smoke_test_check",
+      "tests_smoke_test_py"
+    ],
+    "41": [
+      "graph_builder_rationale_652"
+    ],
+    "42": [
+      "backend_init_py"
+    ],
+    "43": [
+      "frontend_eslint_config_js"
+    ],
+    "44": [
+      "frontend_vite_config_js"
+    ],
+    "45": [
+      "frontend_src_main_jsx"
+    ],
+    "46": [
+      "readme_arch"
+    ],
+    "47": [
+      "readme_scoring"
+    ],
+    "48": [
+      "readme_features"
+    ],
+    "49": [
+      "impl_conversational"
+    ],
+    "50": [
+      "impl_hnsw"
+    ],
+    "51": [
+      "impl_node2vec"
+    ],
+    "52": [
+      "impl_sqlite"
+    ],
+    "53": [
+      "impl_intent"
+    ],
+    "54": [
+      "improve_apostrophe"
+    ],
+    "55": [
+      "improve_db_fields"
+    ],
+    "56": [
+      "asset_hero"
+    ],
+    "57": [
+      "asset_react"
+    ],
+    "58": [
+      "asset_vite"
+    ]
+  },
+  "cohesion": {
+    "0": 0.06,
+    "1": 0.04,
+    "2": 0.19,
+    "3": 0.06,
+    "4": 0.1,
+    "5": 0.08,
+    "6": 0.22,
+    "7": 0.12,
+    "8": 0.13,
+    "9": 0.19,
+    "10": 0.6,
+    "11": 0.5,
+    "12": 0.5,
+    "13": 0.5,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0,
+    "47": 1.0,
+    "48": 1.0,
+    "49": 1.0,
+    "50": 1.0,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 1.0,
+    "54": 1.0,
+    "55": 1.0,
+    "56": 1.0,
+    "57": 1.0,
+    "58": 1.0
+  },
+  "gods": [
+    {
+      "id": "graph_builder_alumnigraph",
+      "label": "AlumniGraph",
+      "degree": 45
+    },
+    {
+      "id": "embeddings_embeddingsmanager",
+      "label": "EmbeddingsManager",
+      "degree": 39
+    },
+    {
+      "id": "entity_extractor_entityextractor",
+      "label": "EntityExtractor",
+      "degree": 34
+    },
+    {
+      "id": "embeddings_crossencoderreranker",
+      "label": "CrossEncoderReranker",
+      "degree": 33
+    },
+    {
+      "id": "search_engine_hybridsearchengine",
+      "label": "HybridSearchEngine",
+      "degree": 28
+    },
+    {
+      "id": "conversational_conversationalsearchengine",
+      "label": "ConversationalSearchEngine",
+      "degree": 26
+    },
+    {
+      "id": "cache_manager_lrucache",
+      "label": "LRUCache",
+      "degree": 25
+    },
+    {
+      "id": "trie_autocompletetrie",
+      "label": "AutocompleteTrie",
+      "degree": 25
+    },
+    {
+      "id": "main_startup_logic",
+      "label": "startup_logic()",
+      "degree": 22
+    },
+    {
+      "id": "models_searchrequest",
+      "label": "SearchRequest",
+      "degree": 21
+    }
+  ],
+  "surprises": [
+    {
+      "source": "search()",
+      "target": "make_search_key()",
+      "source_files": [
+        "backend\\main.py",
+        "backend\\cache_manager.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `make_search_key()` unexpectedly reaches hub `search()`"
+    },
+    {
+      "source": "startup_logic()",
+      "target": "ConversationalSearchEngine",
+      "source_files": [
+        "backend\\main.py",
+        "backend\\conversational.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "startup_logic()",
+      "target": "EmbeddingsManager",
+      "source_files": [
+        "backend\\main.py",
+        "backend\\embeddings.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "startup_logic()",
+      "target": "CrossEncoderReranker",
+      "source_files": [
+        "backend\\main.py",
+        "backend\\embeddings.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "startup_logic()",
+      "target": "EntityExtractor",
+      "source_files": [
+        "backend\\main.py",
+        "backend\\entity_extractor.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `AlumniGraph` connect `Community 2` to `Community 1`, `Community 21`, `Community 3`, `Community 5`?",
+      "why": "High betweenness centrality (0.062) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `LRUCache` connect `Community 2` to `Community 16`, `Community 1`, `Community 3`, `Community 17`?",
+      "why": "High betweenness centrality (0.054) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `startup_logic()` connect `Community 1` to `Community 2`, `Community 3`, `Community 5`?",
+      "why": "High betweenness centrality (0.053) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 28 inferred relationships involving `AlumniGraph` (e.g. with `FastAPI Backend \u2014 Main application with REST endpoints for alumni semantic searc` and `Initialize all components on server startup.`) actually correct?",
+      "why": "`AlumniGraph` has 28 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 28 inferred relationships involving `EmbeddingsManager` (e.g. with `FastAPI Backend \u2014 Main application with REST endpoints for alumni semantic searc` and `Initialize all components on server startup.`) actually correct?",
+      "why": "`EmbeddingsManager` has 28 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 28 inferred relationships involving `EntityExtractor` (e.g. with `FastAPI Backend \u2014 Main application with REST endpoints for alumni semantic searc` and `Initialize all components on server startup.`) actually correct?",
+      "why": "`EntityExtractor` has 28 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 28 inferred relationships involving `CrossEncoderReranker` (e.g. with `FastAPI Backend \u2014 Main application with REST endpoints for alumni semantic searc` and `Initialize all components on server startup.`) actually correct?",
+      "why": "`CrossEncoderReranker` has 28 INFERRED edges - model-reasoned connections that need verification."
+    }
+  ]
+}
